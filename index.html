@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VEXLO.CORE · Cognitive AI Prototype</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #ffffff;
+            color: #1a1a1a;
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .header {
+            padding: 16px 24px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 300;
+            color: #1a1a1a;
+            letter-spacing: 1px;
+        }
+        .header h1 span { color: #2c6b9e; font-weight: 600; }
+        .status-bar {
+            display: flex;
+            gap: 20px;
+            font-size: 0.85rem;
+            color: #555;
+            align-items: center;
+        }
+        .status-bar .badge {
+            background: #e9ecef;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+        }
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.8fr 1fr;
+            gap: 16px;
+            padding: 16px;
+            flex: 1;
+            min-height: 0;
+            background: #fafafa;
+        }
+        @media (max-width: 1024px) {
+            .main-grid { grid-template-columns: 1fr 1.5fr; grid-template-rows: auto 1fr; }
+        }
+        @media (max-width: 768px) {
+            .main-grid { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; }
+        }
+        .panel {
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e8e8e8;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        }
+        .panel h3 {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #888;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        .panel textarea {
+            width: 100%;
+            height: 80px;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            color: #1a1a1a;
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            resize: vertical;
+        }
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        .btn-group button, .chat-actions button {
+            background: #f1f3f5;
+            border: 1px solid #d0d0d0;
+            color: #1a1a1a;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: 500;
+        }
+        .btn-group button:hover {
+            background: #e2e6ea;
+            border-color: #b0b0b0;
+        }
+        .btn-group button.primary {
+            background: #2c6b9e;
+            border-color: #2c6b9e;
+            color: white;
+        }
+        .btn-group button.primary:hover { background: #1f4f7a; }
+        .btn-group button.danger {
+            background: #dc3545;
+            border-color: #dc3545;
+            color: white;
+        }
+        .btn-group button.danger:hover { background: #b02a37; }
+        .chat-log {
+            flex: 1;
+            overflow-y: auto;
+            background: #fafafa;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            max-height: 400px;
+            border: 1px solid #eaeaea;
+        }
+        .chat-log .user {
+            color: #1a1a1a;
+            text-align: right;
+            background: #e9ecef;
+            padding: 6px 12px;
+            border-radius: 16px;
+            margin: 4px 0;
+        }
+        .chat-log .ai {
+            color: #1a1a1a;
+            text-align: left;
+            background: #f1f3f5;
+            padding: 6px 12px;
+            border-radius: 16px;
+            margin: 4px 0;
+        }
+        .chat-log .system {
+            color: #6c757d;
+            text-align: center;
+            font-style: italic;
+            font-size: 0.8rem;
+            margin: 8px 0;
+        }
+        .chat-log .cot {
+            background: #f8f9fa;
+            border-left: 3px solid #2c6b9e;
+            padding: 8px 12px;
+            margin: 6px 0;
+            font-size: 0.8rem;
+            color: #333;
+            border-radius: 4px;
+        }
+        .chat-log .cot strong { color: #2c6b9e; }
+        .chat-input-row {
+            display: flex;
+            gap: 8px;
+        }
+        .chat-input-row input {
+            flex: 1;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            color: #1a1a1a;
+            padding: 10px 16px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+        .chat-input-row input:focus { border-color: #2c6b9e; }
+        .footer {
+            padding: 12px 24px;
+            background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: 0.8rem;
+            color: #6c757d;
+            align-items: center;
+        }
+        .footer button {
+            background: transparent;
+            border: 1px solid #d0d0d0;
+            color: #555;
+            padding: 4px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .footer button:hover { background: #e9ecef; }
+        #chainView {
+            background: #fafafa;
+            border-radius: 8px;
+            padding: 8px;
+            height: 160px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+            border: 1px solid #eaeaea;
+        }
+        .status-indicator {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-top: 6px;
+        }
+        #nnStats { font-size: 0.8rem; color: #495057; }
+        #trainingProgress { width: 100%; height: 3px; background: #e9ecef; border-radius: 3px; margin-top: 6px; }
+        #trainingProgress .bar { height: 100%; width: 0%; background: #2c6b9e; border-radius: 3px; transition: width 0.2s; }
+        #photonCanvas {
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: #e9ecef;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            image-rendering: pixelated;
+            cursor: pointer;
+        }
+        .photon-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-top: 4px;
+        }
+        .camera-actions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+        .camera-actions button {
+            flex: 1;
+            background: #f1f3f5;
+            border: 1px solid #ddd;
+            color: #1a1a1a;
+            border-radius: 30px;
+            padding: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .camera-actions button:hover { background: #e2e6ea; }
+        .mood-badge {
+            background: #e9ecef;
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: #555;
+        }
+        .cot-toggle {
+            background: none;
+            border: none;
+            color: #2c6b9e;
+            cursor: pointer;
+            font-size: 0.75rem;
+            text-decoration: underline;
+            padding: 0;
+        }
+        .cot-toggle:hover { color: #1f4f7a; }
+        .web-badge {
+            background: #d4edda;
+            color: #155724;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.65rem;
+            margin-left: 6px;
+        }
+        .loading-dots::after {
+            content: '';
+            animation: dots 1.2s steps(5) infinite;
+        }
+        @keyframes dots {
+            0% { content: ''; }
+            20% { content: '.'; }
+            40% { content: '..'; }
+            60% { content: '...'; }
+            80% { content: '....'; }
+            100% { content: '.....'; }
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1><span>VEXLO</span>.CORE</h1>
+    <div class="status-bar">
+        <span class="badge">Neural Hash</span>
+        <span class="badge" id="selfAware">Sadar: 0%</span>
+        <span class="badge" id="blockCount">Blok: 0</span>
+        <span class="badge" id="vocabSize">Kata: 0</span>
+        <span class="badge" id="contributors">Kontributor: 1</span>
+        <span class="badge mood-badge" id="moodDisplay">Netral</span>
+    </div>
+</div>
+
+<div class="main-grid">
+    <!-- Kiri: Foton + Scraper -->
+    <div class="panel">
+        <h3>SUMBER FOTON (ENTROPI)</h3>
+        <canvas id="photonCanvas" width="400" height="300"></canvas>
+        <div class="photon-stats">
+            <span>Entropi: <b id="entropyVal">0.00</b></span>
+            <span>Seed: <b id="seedVal">0.0000</b></span>
+            <span>Kontribusi: <b id="contribCount">0</b></span>
+        </div>
+        <div class="camera-actions">
+            <button id="camBtn">Kamera</button>
+            <button id="uploadBtn">Upload Gambar</button>
+            <input type="file" id="fileInput" accept="image/*" style="display:none">
+            <button id="snapshotBtn">Ambil & Train</button>
+        </div>
+        <div style="margin-top:12px;">
+            <h3 style="font-size:0.8rem; color:#888;">SCRAPER (WEB & ONION)</h3>
+            <textarea id="scrapeInput" placeholder="URL atau teks...">https://id.wikipedia.org/wiki/Kecerdasan_buatan</textarea>
+            <div class="btn-group">
+                <button id="scrapeBtn" class="primary">Scrape URL</button>
+                <button id="trainTextBtn">Train Teks</button>
+                <button id="resetBtn" class="danger">Reset</button>
+            </div>
+        </div>
+        <div style="margin-top:8px; display:flex; justify-content:space-between; font-size:0.8rem; color:#6c757d;">
+            <span id="trainingStatus">Idle</span>
+            <span id="nnStats">Epoch: 0 | Loss: -</span>
+        </div>
+        <div id="trainingProgress"><div class="bar" id="progressBar"></div></div>
+    </div>
+
+    <!-- Tengah: Chat -->
+    <div class="panel" style="grid-row: span 2;">
+        <h3>CHAT · CHAIN OF THOUGHT</h3>
+        <div class="chat-log" id="chatLog">
+            <div class="system">VEXLO.CORE siap. Bertanya tentang fisika, quantum, atau apa saja.</div>
+        </div>
+        <div class="chat-input-row">
+            <input type="text" id="chatInput" placeholder="Ketik pertanyaan..." />
+            <button id="sendBtn" style="background:#2c6b9e; color:white; border:none; border-radius:30px; padding:0 24px; font-weight:600;">Kirim</button>
+        </div>
+        <div class="status-indicator" id="thinkingStatus">Idle</div>
+        <div style="margin-top:6px; font-size:0.75rem; color:#888;">
+            <span>Web search aktif jika diperlukan</span>
+            <span style="margin-left:16px;">Chain of Thought: <span id="cotStatus">otomatis</span></span>
+        </div>
+    </div>
+
+    <!-- Kanan: Blockchain & Debug -->
+    <div class="panel">
+        <h3>CHAIN & KONTRIBUSI</h3>
+        <div id="chainView">Belum ada blok...</div>
+        <div class="btn-group" style="margin-top:8px;">
+            <button id="debugBtn">Debug Chain</button>
+            <button id="exportBtn">Export Model</button>
+            <button id="importBtn">Import</button>
+            <input type="file" id="importFile" accept=".json" style="display:none">
+        </div>
+        <div style="margin-top:8px; font-size:0.75rem; color:#6c757d;">
+            <span>Total sampel: <b id="totalSamples">0</b></span>
+            <span style="margin-left:15px;">Versi: <b id="modelVersion">1</b></span>
+            <span style="margin-left:15px;">Mood: <b id="moodLabel">Netral</b></span>
+        </div>
+    </div>
+</div>
+
+<div class="footer">
+    <span>2026 vexlo.core · Cognitive AI Prototype · Foton + Desentralisasi</span>
+    <span style="margin-left:auto;">Setiap pertanyaan membangun pengetahuan</span>
+</div>
+
+<script>
+// ================================================================
+// 1. MULTI-HASH + COLLISION HANDLING
+// ================================================================
+const HASH_SIZE = 4096;
+const HIDDEN_SIZE = 384;
+const LR = 0.008;
+
+function hashWord(word) {
+    let hash1 = 0x811c9dc5;
+    for (let i = 0; i < word.length; i++) {
+        hash1 ^= word.charCodeAt(i);
+        hash1 = (hash1 * 0x01000193) >>> 0;
+    }
+    let hash2 = 5381;
+    for (let i = 0; i < word.length; i++) {
+        hash2 = ((hash2 << 5) + hash2) + word.charCodeAt(i);
+        hash2 = hash2 >>> 0;
+    }
+    return (hash1 ^ hash2) % HASH_SIZE;
+}
+
+let hashToWords = {};
+
+function addWordToHash(word) {
+    const h = hashWord(word);
+    if (!hashToWords[h]) hashToWords[h] = [];
+    if (!hashToWords[h].includes(word)) {
+        hashToWords[h].push(word);
+    }
+    return h;
+}
+
+function getWordByHash(hash, context = '') {
+    const candidates = hashToWords[hash] || [];
+    if (candidates.length === 0) return null;
+    if (candidates.length === 1) return candidates[0];
+    const rng = seedRandom(photonSeed + Date.now() % 1000 / 1000);
+    const idx = Math.floor(rng() * candidates.length);
+    return candidates[idx];
+}
+
+// ================================================================
+// 2. NEURAL NETWORK
+// ================================================================
+class NeuralDecentral {
+    constructor() {
+        this.W1 = new Float32Array(HASH_SIZE * HIDDEN_SIZE);
+        this.b1 = new Float32Array(HIDDEN_SIZE);
+        this.W2 = new Float32Array(HIDDEN_SIZE * HASH_SIZE);
+        this.b2 = new Float32Array(HASH_SIZE);
+        const scale1 = Math.sqrt(2 / (HASH_SIZE + HIDDEN_SIZE));
+        for (let i = 0; i < this.W1.length; i++) this.W1[i] = (Math.random() * 2 - 1) * scale1;
+        const scale2 = Math.sqrt(2 / (HIDDEN_SIZE + HASH_SIZE));
+        for (let i = 0; i < this.W2.length; i++) this.W2[i] = (Math.random() * 2 - 1) * scale2;
+        this.epoch = 0;
+        this.loss = 0;
+        this.sampleCount = 0;
+        this.version = 1;
+    }
+
+    forward(inputIndices) {
+        const hidden = new Float32Array(HIDDEN_SIZE);
+        for (let j = 0; j < HIDDEN_SIZE; j++) {
+            let sum = this.b1[j];
+            for (let idx of inputIndices) sum += this.W1[idx * HIDDEN_SIZE + j];
+            hidden[j] = Math.max(0, sum);
+        }
+        const output = new Float32Array(HASH_SIZE);
+        for (let k = 0; k < HASH_SIZE; k++) {
+            let sum = this.b2[k];
+            for (let j = 0; j < HIDDEN_SIZE; j++) sum += hidden[j] * this.W2[j * HASH_SIZE + k];
+            output[k] = sum;
+        }
+        const max = Math.max(...output);
+        let expSum = 0;
+        for (let k = 0; k < HASH_SIZE; k++) {
+            output[k] = Math.exp(output[k] - max);
+            expSum += output[k];
+        }
+        for (let k = 0; k < HASH_SIZE; k++) output[k] /= expSum;
+        return { hidden, output };
+    }
+
+    train(inputIndices, targetIndex, seed = null) {
+        if (seed !== null) {
+            const rng = seedRandom(seed);
+            if (rng() > 0.5 && inputIndices.length > 1) {
+                const a = Math.floor(rng() * inputIndices.length);
+                const b = Math.floor(rng() * inputIndices.length);
+                [inputIndices[a], inputIndices[b]] = [inputIndices[b], inputIndices[a]];
+            }
+        }
+        const { hidden, output } = this.forward(inputIndices);
+        const loss = -Math.log(output[targetIndex] + 1e-10);
+        this.loss = this.loss * 0.9 + loss * 0.1;
+
+        const dOutput = new Float32Array(HASH_SIZE);
+        for (let k = 0; k < HASH_SIZE; k++) dOutput[k] = output[k] - (k === targetIndex ? 1 : 0);
+
+        for (let j = 0; j < HIDDEN_SIZE; j++) {
+            const base = j * HASH_SIZE;
+            for (let k = 0; k < HASH_SIZE; k++) this.W2[base + k] -= LR * dOutput[k] * hidden[j];
+        }
+        for (let k = 0; k < HASH_SIZE; k++) this.b2[k] -= LR * dOutput[k];
+
+        const dHidden = new Float32Array(HIDDEN_SIZE);
+        for (let j = 0; j < HIDDEN_SIZE; j++) {
+            let sum = 0;
+            const base = j * HASH_SIZE;
+            for (let k = 0; k < HASH_SIZE; k++) sum += dOutput[k] * this.W2[base + k];
+            dHidden[j] = (hidden[j] > 0) ? sum : 0;
+        }
+        for (let idx of inputIndices) {
+            const base = idx * HIDDEN_SIZE;
+            for (let j = 0; j < HIDDEN_SIZE; j++) this.W1[base + j] -= LR * dHidden[j];
+        }
+        for (let j = 0; j < HIDDEN_SIZE; j++) this.b1[j] -= LR * dHidden[j];
+
+        this.epoch++;
+        this.sampleCount++;
+    }
+
+    async *generateStream(seedTokens, maxTokens = 40, temperature = 0.8, seed = null) {
+        if (!seedTokens.length) return;
+        let result = seedTokens.slice();
+        let current = seedTokens[seedTokens.length - 1];
+        let rng = seedRandom(seed || Date.now());
+        for (let i = 0; i < maxTokens; i++) {
+            const idx = hashWord(current);
+            const { output } = this.forward([idx]);
+            let r = rng();
+            let cum = 0;
+            let nextIdx = 0;
+            for (let k = 0; k < HASH_SIZE; k++) {
+                cum += output[k];
+                if (r <= cum) { nextIdx = k; break; }
+            }
+            const nextWord = getWordByHash(nextIdx, result.join(' '));
+            if (!nextWord) break;
+            result.push(nextWord);
+            current = nextWord;
+            yield nextWord;
+            if (['.', '?', '!'].includes(current)) break;
+        }
+    }
+
+    generate(seedTokens, maxTokens = 40, temperature = 0.8, seed = null) {
+        if (!seedTokens.length) return '';
+        let result = seedTokens.slice();
+        let current = seedTokens[seedTokens.length - 1];
+        let rng = seedRandom(seed || Date.now());
+        for (let i = 0; i < maxTokens; i++) {
+            const idx = hashWord(current);
+            const { output } = this.forward([idx]);
+            let r = rng();
+            let cum = 0;
+            let nextIdx = 0;
+            for (let k = 0; k < HASH_SIZE; k++) {
+                cum += output[k];
+                if (r <= cum) { nextIdx = k; break; }
+            }
+            const nextWord = getWordByHash(nextIdx, result.join(' '));
+            if (!nextWord) break;
+            result.push(nextWord);
+            current = nextWord;
+            if (['.', '?', '!'].includes(current)) break;
+        }
+        return result.join(' ');
+    }
+
+    federate(otherModel, weight = 0.5) {
+        for (let i = 0; i < this.W1.length; i++) this.W1[i] = this.W1[i] * (1 - weight) + otherModel.W1[i] * weight;
+        for (let i = 0; i < this.b1.length; i++) this.b1[i] = this.b1[i] * (1 - weight) + otherModel.b1[i] * weight;
+        for (let i = 0; i < this.W2.length; i++) this.W2[i] = this.W2[i] * (1 - weight) + otherModel.W2[i] * weight;
+        for (let i = 0; i < this.b2.length; i++) this.b2[i] = this.b2[i] * (1 - weight) + otherModel.b2[i] * weight;
+        this.version++;
+    }
+
+    toJSON() {
+        return {
+            W1: Array.from(this.W1), b1: Array.from(this.b1),
+            W2: Array.from(this.W2), b2: Array.from(this.b2),
+            epoch: this.epoch, loss: this.loss,
+            sampleCount: this.sampleCount, version: this.version
+        };
+    }
+
+    fromJSON(data) {
+        this.W1 = new Float32Array(data.W1); this.b1 = new Float32Array(data.b1);
+        this.W2 = new Float32Array(data.W2); this.b2 = new Float32Array(data.b2);
+        this.epoch = data.epoch; this.loss = data.loss;
+        this.sampleCount = data.sampleCount; this.version = data.version;
+    }
+}
+
+function seedRandom(seed) {
+    return function() {
+        seed = (seed * 9301 + 49297) % 233280;
+        return seed / 233280;
+    };
+}
+
+// ================================================================
+// 3. DATA MANAGEMENT
+// ================================================================
+let nn = new NeuralDecentral();
+let totalSamples = 0;
+let isTraining = false;
+let trainingQueue = [];
+
+function tokenize(text) {
+    return text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 0);
+}
+
+// ================================================================
+// 4. FOTON
+// ================================================================
+const canvas = document.getElementById('photonCanvas');
+const ctx = canvas.getContext('2d');
+let photonSeed = 42;
+let photonEntropy = 0.5;
+let contributionCount = 0;
+let videoStream = null;
+
+function processPhoton(imageData) {
+    const data = imageData.data;
+    let sum = 0, count = 0;
+    for (let i = 0; i < data.length; i += 4) {
+        sum += data[i] + data[i+1] + data[i+2];
+        count += 3;
+    }
+    const avg = sum / count / 255;
+    photonEntropy = avg;
+    let hash = 0;
+    for (let i = 0; i < data.length; i += 100) hash = (hash * 31 + data[i]) & 0xFFFFFFFF;
+    photonSeed = (hash % 10000) / 10000;
+    document.getElementById('entropyVal').innerText = photonEntropy.toFixed(3);
+    document.getElementById('seedVal').innerText = photonSeed.toFixed(4);
+}
+
+function captureAndTrain() {
+    const w = canvas.width, h = canvas.height;
+    ctx.drawImage(videoSource || canvas, 0, 0, w, h);
+    const imageData = ctx.getImageData(0, 0, w, h);
+    processPhoton(imageData);
+    const text = document.getElementById('scrapeInput').value.trim();
+    if (text.length > 10) {
+        const tokens = tokenize(text);
+        if (tokens.length > 1) {
+            for (let w of tokens) addWordToHash(w);
+            const rng = seedRandom(photonSeed);
+            for (let i = 0; i < Math.min(50, tokens.length - 1); i++) {
+                const idx = Math.floor(rng() * (tokens.length - 1));
+                const inWord = tokens[idx], outWord = tokens[idx+1];
+                nn.train([hashWord(inWord)], hashWord(outWord), photonSeed + i);
+            }
+            totalSamples += Math.min(50, tokens.length - 1);
+            contributionCount++;
+            document.getElementById('contribCount').innerText = contributionCount;
+            updateUIStats();
+            addChatLog('system', 'Sumbangan foton #' + contributionCount + ' seed ' + photonSeed.toFixed(4));
+        }
+    } else {
+        addChatLog('system', 'Isi teks di kolom scraper untuk training.');
+    }
+}
+
+let videoSource = null;
+document.getElementById('camBtn').addEventListener('click', async () => {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        const video = document.createElement('video');
+        video.srcObject = stream; video.play();
+        videoSource = video; videoStream = stream;
+        function loop() {
+            if (videoSource) {
+                ctx.drawImage(videoSource, 0, 0, canvas.width, canvas.height);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                processPhoton(imageData);
+                requestAnimationFrame(loop);
+            }
+        }
+        loop();
+    } catch(e) { alert('Izin kamera dibutuhkan.'); }
+});
+
+document.getElementById('uploadBtn').addEventListener('click', () => document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const img = new Image();
+    img.onload = () => {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        videoSource = img;
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        processPhoton(imageData);
+    };
+    img.src = URL.createObjectURL(file);
+});
+
+document.getElementById('snapshotBtn').addEventListener('click', captureAndTrain);
+
+// ================================================================
+// 5. SCRAPER (WEB + ONION)
+// ================================================================
+let scrapeCache = {};
+
+async function scrapeURL(url) {
+    if (scrapeCache[url] && (Date.now() - scrapeCache[url].timestamp < 300000)) {
+        return scrapeCache[url].data;
+    }
+    let targetUrl = url;
+    if (url.includes('.onion')) {
+        targetUrl = 'https://onion.to/' + url;
+    }
+    try {
+        const proxy = 'https://api.allorigins.win/raw?url=';
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const resp = await fetch(proxy + encodeURIComponent(targetUrl), { signal: controller.signal });
+        clearTimeout(timeoutId);
+        const html = await resp.text();
+        const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 15000);
+        scrapeCache[url] = { data: text, timestamp: Date.now() };
+        return text;
+    } catch(e) {
+        throw new Error('Scrape gagal: ' + e.message);
+    }
+}
+
+async function trainAsync(text, seed = null) {
+    if (isTraining) { trainingQueue.push({ text, seed }); return; }
+    isTraining = true;
+    document.getElementById('trainingStatus').innerText = 'Training...';
+    const tokens = tokenize(text);
+    if (tokens.length < 2) { isTraining = false; return; }
+    for (let w of tokens) addWordToHash(w);
+    const total = Math.min(tokens.length - 1, 300);
+    let done = 0;
+    const rng = seedRandom(seed || Date.now());
+    for (let i = 0; i < total; i++) {
+        const idx = Math.floor(rng() * (tokens.length - 1));
+        const inWord = tokens[idx], outWord = tokens[idx+1];
+        nn.train([hashWord(inWord)], hashWord(outWord), seed ? seed + i : null);
+        done++;
+        if (done % 20 === 0) {
+            const pct = (done / total) * 100;
+            document.getElementById('progressBar').style.width = pct + '%';
+            updateUIStats();
+            await new Promise(r => setTimeout(r, 0));
+        }
+    }
+    totalSamples += done;
+    document.getElementById('progressBar').style.width = '100%';
+    document.getElementById('trainingStatus').innerText = 'Selesai';
+    isTraining = false;
+    updateUIStats();
+    if (trainingQueue.length) {
+        const next = trainingQueue.shift();
+        trainAsync(next.text, next.seed);
+    }
+}
+
+function updateUIStats() {
+    document.getElementById('nnStats').innerHTML = 'Epoch: ' + nn.epoch + ' | Loss: ' + nn.loss.toFixed(4);
+    document.getElementById('totalSamples').innerText = totalSamples;
+    const vocabSize = Object.keys(hashToWords).length;
+    document.getElementById('vocabSize').innerHTML = 'Kata: ' + vocabSize;
+    const aware = Math.min(100, Math.floor(totalSamples / 20));
+    document.getElementById('selfAware').innerHTML = 'Sadar: ' + aware + '%';
+    document.getElementById('modelVersion').innerText = nn.version;
+    document.getElementById('moodDisplay').innerText = 'Netral';
+    document.getElementById('moodLabel').innerText = 'Netral';
+}
+
+// ================================================================
+// 6. BLOCKCHAIN
+// ================================================================
+let chain = [];
+function sha256(msg) {
+    let hash = 0;
+    for (let i=0; i<msg.length; i++) {
+        const char = msg.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return '0x' + Math.abs(hash).toString(16).padStart(8,'0');
+}
+
+function addBlock(user, ai, cot = '') {
+    const data = { user, ai, cot, ts: new Date().toISOString(), photonSeed, contribution: contributionCount };
+    const prevHash = chain.length ? chain[chain.length-1].hash : 'GENESIS';
+    const hash = sha256(JSON.stringify(data) + prevHash);
+    chain.push({ data, hash, prevHash });
+    document.getElementById('blockCount').innerHTML = 'Blok: ' + chain.length;
+    renderChain();
+    try { localStorage.setItem('vexlo_chain', JSON.stringify(chain)); } catch(e) {}
+}
+
+function renderChain() {
+    const view = document.getElementById('chainView');
+    if (!chain.length) { view.innerHTML = 'Belum ada blok...'; return; }
+    let html = '';
+    const recent = chain.slice(-5).reverse();
+    for (let b of recent) {
+        html += '<div style="border-bottom:1px solid #eee; padding:4px 0; font-size:0.75rem;">' +
+            '<span style="color:#2c6b9e;">#' + chain.indexOf(b) + '</span>' +
+            '<span style="color:#555;">' + b.data.user.substring(0,12) + '...</span>' +
+            '<span style="color:#333;"> -> ' + b.data.ai.substring(0,15) + '...</span>' +
+            '<span style="color:#999; float:right;">' + b.hash.substring(0,6) + '</span>' +
+        '</div>';
+    }
+    view.innerHTML = html;
+}
+
+// ================================================================
+// 7. CHAT + CoT + WEB SEARCH + STREAMING
+// ================================================================
+function addChatLog(type, msg) {
+    const log = document.getElementById('chatLog');
+    const div = document.createElement('div');
+    if (type === 'user') {
+        div.className = 'user';
+        div.innerText = 'User: ' + msg;
+    } else if (type === 'ai') {
+        div.className = 'ai';
+        div.innerText = 'AI: ' + msg;
+    } else if (type === 'cot') {
+        div.className = 'cot';
+        div.innerHTML = '<strong>Chain of Thought:</strong> ' + msg;
+    } else {
+        div.className = 'system';
+        div.innerText = 'System: ' + msg;
+    }
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+}
+
+async function webSearch(query) {
+    try {
+        const searchUrl = 'https://id.wikipedia.org/w/api.php?action=query&list=search&srsearch=' + encodeURIComponent(query) + '&format=json&origin=*';
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const resp = await fetch(searchUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        const data = await resp.json();
+        if (data.query && data.query.search && data.query.search.length > 0) {
+            const title = data.query.search[0].title;
+            const contentUrl = 'https://id.wikipedia.org/w/api.php?action=parse&page=' + encodeURIComponent(title) + '&format=json&origin=*';
+            const resp2 = await fetch(contentUrl);
+            const data2 = await resp2.json();
+            if (data2.parse && data2.parse.text) {
+                const html = data2.parse.text['*'];
+                const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 3000);
+                return text;
+            }
+        }
+        const fallback = 'https://api.allorigins.win/raw?url=https://id.wikipedia.org/wiki/' + encodeURIComponent(query);
+        const resp3 = await fetch(fallback);
+        const html3 = await resp3.text();
+        const text3 = html3.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 3000);
+        return text3;
+    } catch(e) {
+        return null;
+    }
+}
+
+document.getElementById('sendBtn').addEventListener('click', handleSend);
+document.getElementById('chatInput').addEventListener('keydown', (e) => { if(e.key === 'Enter') handleSend(); });
+
+async function handleSend() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    addChatLog('user', text);
+    const statusEl = document.getElementById('thinkingStatus');
+    statusEl.innerText = 'Memproses...';
+
+    const needWeb = /(terbaru|berita|riset|penelitian|update|baru|sekarang|tahun ini|fisika|quantum|mekanika|relativitas|kosmologi)/i.test(text);
+    let webData = null;
+    if (needWeb) {
+        addChatLog('system', 'Mencari informasi terkini di web...');
+        const start = Date.now();
+        webData = await webSearch(text);
+        if (webData) {
+            addChatLog('system', 'Informasi web ditemukan (' + (Date.now()-start) + 'ms)');
+        } else {
+            addChatLog('system', 'Tidak ditemukan data web, menggunakan pengetahuan internal.');
+        }
+    }
+
+    const tokens = tokenize(text);
+    if (tokens.length === 0) {
+        addChatLog('ai', 'Mohon tulis pertanyaan yang lebih jelas.');
+        statusEl.innerText = 'Idle';
+        return;
+    }
+
+    let fullPrompt = text;
+    if (webData) fullPrompt = text + ' ' + webData.slice(0, 1500);
+
+    const cotPrompt = 'Reasoning langkah demi langkah untuk menjawab: ' + fullPrompt;
+    const cotTokens = tokenize(cotPrompt);
+    const temperature = 0.7 + (photonEntropy * 0.3);
+    const seed = photonSeed + (Date.now() % 10000) / 10000;
+
+    const cotGen = nn.generateStream(cotTokens, 35, temperature, seed);
+    addChatLog('system', 'Menghasilkan reasoning...');
+    let reasoning = '';
+    for await (const token of cotGen) {
+        reasoning += token + ' ';
+        const cotDiv = document.querySelector('.chat-log .cot:last-of-type');
+        if (cotDiv) {
+            cotDiv.innerHTML = '<strong>Chain of Thought:</strong> ' + reasoning.trim();
+        } else {
+            addChatLog('cot', reasoning.trim());
+        }
+        await new Promise(r => setTimeout(r, 15));
+    }
+    if (!reasoning || reasoning.length < 5) reasoning = 'Analisis awal: pertanyaan ini membutuhkan pemahaman mendalam.';
+
+    const answerPrompt = 'Berdasarkan reasoning di atas, jawaban akhir untuk: ' + text;
+    const ansTokens = tokenize(answerPrompt);
+    const ansGen = nn.generateStream(ansTokens, 30, temperature, seed + 0.3);
+    addChatLog('system', 'Menghasilkan jawaban...');
+    let answer = '';
+    for await (const token of ansGen) {
+        answer += token + ' ';
+        const aiDiv = document.querySelector('.chat-log .ai:last-of-type');
+        if (aiDiv) {
+            aiDiv.innerText = 'AI: ' + answer.trim();
+        } else {
+            addChatLog('ai', answer.trim());
+        }
+        await new Promise(r => setTimeout(r, 20));
+    }
+    if (!answer || answer.length < 3) {
+        answer = 'Maaf, saya belum memiliki pengetahuan yang cukup untuk menjawab dengan tepat.';
+        addChatLog('ai', answer);
+    }
+
+    addBlock(text, answer, reasoning);
+    statusEl.innerText = 'Selesai';
+
+    await trainAsync(fullPrompt + ' ' + reasoning + ' ' + answer, photonSeed);
+}
+
+// ================================================================
+// 8. UI EVENTS
+// ================================================================
+document.getElementById('scrapeBtn').addEventListener('click', async () => {
+    const url = document.getElementById('scrapeInput').value.trim();
+    if (!url) return alert('Masukkan URL');
+    addChatLog('system', 'Scraping...');
+    try {
+        const text = await scrapeURL(url);
+        if (text.length < 50) throw new Error('Teks terlalu pendek');
+        document.getElementById('scrapeInput').value = text.slice(0, 500) + '...';
+        addChatLog('system', 'Berhasil scrape ' + text.split(' ').length + ' kata');
+        await trainAsync(text, photonSeed);
+        addChatLog('system', 'Training selesai dari scrape');
+    } catch(e) {
+        addChatLog('system', 'Error: ' + e.message);
+    }
+});
+
+document.getElementById('trainTextBtn').addEventListener('click', async () => {
+    const text = document.getElementById('scrapeInput').value.trim();
+    if (text.length < 10) return alert('Teks terlalu pendek');
+    addChatLog('system', 'Training manual...');
+    await trainAsync(text, photonSeed);
+    addChatLog('system', 'Training selesai');
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+    if (confirm('Reset semua data? Tidak bisa dibatalkan!')) {
+        nn = new NeuralDecentral();
+        totalSamples = 0;
+        chain = [];
+        contributionCount = 0;
+        hashToWords = {};
+        localStorage.removeItem('vexlo_chain');
+        document.getElementById('chainView').innerHTML = 'Direset';
+        document.getElementById('blockCount').innerHTML = 'Blok: 0';
+        document.getElementById('contribCount').innerText = '0';
+        updateUIStats();
+        addChatLog('system', 'Semua data direset');
+        document.getElementById('progressBar').style.width = '0%';
+    }
+});
+
+// ================================================================
+// 9. DEBUG & EXPORT/IMPORT
+// ================================================================
+document.getElementById('debugBtn').addEventListener('click', () => {
+    if (!chain.length) { alert('Chain kosong'); return; }
+    let msg = 'Total blok: ' + chain.length + '\nKontribusi: ' + contributionCount + '\n\n';
+    chain.slice(-3).forEach((b, i) => {
+        msg += '#' + i + ' | ' + b.data.user + ' -> ' + b.data.ai + '\nHash: ' + b.hash + '\n\n';
+    });
+    alert(msg);
+});
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+    const data = {
+        nn: nn.toJSON(),
+        totalSamples,
+        chain,
+        contributionCount,
+        photonSeed,
+        hashToWords
+    };
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'vexlo_model_' + Date.now() + '.json';
+    a.click();
+});
+
+document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        try {
+            const data = JSON.parse(ev.target.result);
+            const importedNN = new NeuralDecentral();
+            importedNN.fromJSON(data.nn);
+            nn.federate(importedNN, 0.4);
+            totalSamples = Math.max(totalSamples, data.totalSamples || 0);
+            if (data.chain) {
+                chain = data.chain;
+                renderChain();
+                document.getElementById('blockCount').innerHTML = 'Blok: ' + chain.length;
+            }
+            if (data.hashToWords) {
+                for (let k in data.hashToWords) {
+                    if (!hashToWords[k]) hashToWords[k] = [];
+                    hashToWords[k] = [...new Set([...hashToWords[k], ...data.hashToWords[k]])];
+                }
+            }
+            contributionCount = Math.max(contributionCount, data.contributionCount || 0);
+            document.getElementById('contribCount').innerText = contributionCount;
+            updateUIStats();
+            addChatLog('system', 'Model diimport dan digabung (federasi).');
+        } catch(err) { alert('File corrupt: ' + err.message); }
+    };
+    reader.readAsText(file);
+});
+
+// ================================================================
+// 10. INIT
+// ================================================================
+async function init() {
+    try {
+        const saved = localStorage.getItem('vexlo_chain');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length) {
+                chain = parsed;
+                renderChain();
+                document.getElementById('blockCount').innerHTML = 'Blok: ' + chain.length;
+            }
+        }
+    } catch(e) {}
+    updateUIStats();
+    addChatLog('system', 'VEXLO.CORE siap. Bertanya tentang fisika, quantum, atau apapun.');
+    const grad = ctx.createRadialGradient(200,150,10,200,150,200);
+    grad.addColorStop(0, '#ffffff'); grad.addColorStop(1, '#d0d0d0');
+    ctx.fillStyle = grad; ctx.fillRect(0,0,400,300);
+    const imageData = ctx.getImageData(0,0,400,300);
+    processPhoton(imageData);
+}
+init();
+
+setInterval(() => {
+    if (!videoStream) {
+        photonSeed = (photonSeed + 0.001 * Math.sin(Date.now() / 1000)) % 1;
+        document.getElementById('seedVal').innerText = photonSeed.toFixed(4);
+    }
+}, 500);
+
+console.log('VEXLO.CORE - Cognitive AI Prototype - Foton + Desentralisasi + Onion Gateway');
+</script>
+</body>
+</html>
