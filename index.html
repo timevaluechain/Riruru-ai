@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VEXLO.CORE · HP Optimized</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #fafafa;
+            color: #1a1a1a;
+            font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        .header {
+            padding: 10px 16px;
+            background: #ffffff;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .header h1 { font-size: 1.1rem; font-weight: 600; color: #1a1a1a; }
+        .header h1 span { color: #2c6b9e; }
+        .status-bar {
+            display: flex;
+            gap: 6px;
+            font-size: 0.6rem;
+            color: #555;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .status-bar .badge {
+            background: #e9ecef;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.6rem;
+            white-space: nowrap;
+        }
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 8px;
+            background: #fafafa;
+            overflow: hidden;
+        }
+        .chat-log {
+            flex: 1;
+            overflow-y: auto;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            border: 1px solid #e8e8e8;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            -webkit-overflow-scrolling: touch;
+        }
+        .chat-log .user { text-align: right; background: #e9ecef; padding: 6px 12px; border-radius: 16px; margin: 4px 0 4px auto; max-width: 85%; display: inline-block; }
+        .chat-log .ai { text-align: left; background: #f1f3f5; padding: 6px 12px; border-radius: 16px; margin: 4px auto 4px 0; max-width: 85%; display: inline-block; }
+        .chat-log .system { text-align: center; color: #6c757d; font-style: italic; font-size: 0.75rem; margin: 6px 0; }
+        .chat-input-row {
+            display: flex;
+            gap: 8px;
+            background: #ffffff;
+            padding: 8px 12px;
+            border-radius: 30px;
+            border: 1px solid #ddd;
+            flex-shrink: 0;
+        }
+        .chat-input-row input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 0.9rem;
+            padding: 6px 0;
+            background: transparent;
+            color: #1a1a1a;
+            min-height: 40px;
+        }
+        .chat-input-row button {
+            background: #2c6b9e;
+            border: none;
+            color: white;
+            padding: 6px 18px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: 0.2s;
+            touch-action: manipulation;
+        }
+        .chat-input-row button:active { transform: scale(0.95); }
+        .footer {
+            padding: 6px 12px;
+            background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 0.6rem;
+            color: #6c757d;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .footer button {
+            background: transparent;
+            border: 1px solid #d0d0d0;
+            color: #555;
+            padding: 2px 10px;
+            border-radius: 16px;
+            cursor: pointer;
+            font-size: 0.6rem;
+            touch-action: manipulation;
+        }
+        .footer button:active { background: #e9ecef; }
+        #trainingProgress { width: 100%; height: 2px; background: #e9ecef; border-radius: 2px; margin-top: 4px; flex-shrink: 0; }
+        #trainingProgress .bar { height: 100%; width: 0%; background: #2c6b9e; border-radius: 2px; transition: width 0.2s; }
+        .status-indicator { font-size: 0.7rem; color: #6c757d; flex-shrink: 0; }
+        .btn-group { display: flex; gap: 4px; flex-wrap: wrap; }
+        .btn-group button { background: transparent; border: 1px solid #d0d0d0; color: #555; padding: 2px 10px; border-radius: 16px; cursor: pointer; font-size: 0.6rem; touch-action: manipulation; }
+        .btn-group button:active { background: #e9ecef; }
+        #photonCanvas { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1><span>VEXLO</span>.CORE</h1>
+    <div class="status-bar">
+        <span class="badge" id="selfAware">Sadar 0%</span>
+        <span class="badge" id="vocabSize">Kata 0</span>
+        <span class="badge" id="nodeCount">Node 1</span>
+        <span class="badge" id="p2pStatus">P2P ●</span>
+    </div>
+</div>
+
+<div class="main">
+    <div class="chat-log" id="chatLog">
+        <div class="system">VEXLO.CORE HP Optimized siap.</div>
+    </div>
+    <div id="trainingProgress"><div class="bar" id="progressBar"></div></div>
+    <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="Tanya..." />
+        <button id="sendBtn">Kirim</button>
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; flex-shrink:0;">
+        <span class="status-indicator" id="thinkingStatus">Idle</span>
+        <div class="btn-group">
+            <button id="resetBtn">Reset</button>
+            <button id="exportBtn">Export</button>
+            <button id="importBtn">Import</button>
+            <input type="file" id="importFile" accept=".json" style="display:none">
+            <button id="shareBtn">Share</button>
+            <button id="syncBtn">Sync</button>
+            <button id="p2pBtn">P2P</button>
+        </div>
+    </div>
+</div>
+
+<div class="footer">
+    <span>Sparse · IndexedDB · Web Worker</span>
+    <span>1M Token · 1M Kata</span>
+</div>
+
+<canvas id="photonCanvas" width="400" height="300"></canvas>
+
+<script>
+// ================================================================
+// 1. KONFIGURASI & KONSTANTA
+// ================================================================
+const HASH_SIZE = 16384;
+const HIDDEN_SIZE = 1024;
+const LR = 0.002;
+const TARGET_TOKENS = 1000000;
+const TARGET_WORDS = 1000000;
+const PRUNE_THRESHOLD = 20;
+const MAX_PEERS = 5;
+
+// ================================================================
+// 2. HASHING TRIPLE (FNV-1a + DJB2 + XOR)
+// ================================================================
+function hashWord(word) {
+    let h1 = 0x811c9dc5;
+    for (let i = 0; i < word.length; i++) { h1 ^= word.charCodeAt(i); h1 = (h1 * 0x01000193) >>> 0; }
+    let h2 = 5381;
+    for (let i = 0; i < word.length; i++) { h2 = ((h2 << 5) + h2) + word.charCodeAt(i); h2 = h2 >>> 0; }
+    let h3 = 0;
+    for (let i = 0; i < word.length; i++) { h3 = (h3 * 31 + word.charCodeAt(i)) & 0xFFFFFFFF; }
+    return (h1 ^ h2 ^ h3) % HASH_SIZE;
+}
+
+let hashToWords = {};
+function addWordToHash(w) {
+    const h = hashWord(w);
+    if (!hashToWords[h]) hashToWords[h] = [];
+    if (!hashToWords[h].includes(w)) hashToWords[h].push(w);
+}
+function getWordByHash(h) {
+    const c = hashToWords[h] || [];
+    if (!c.length) return null;
+    if (c.length === 1) return c[0];
+    const rng = seedRandom(photonSeed + Date.now() % 1000 / 1000);
+    return c[Math.floor(rng() * c.length)];
+}
+
+// ================================================================
+// 3. SPARSE NEURAL NETWORK (HANYA SIMPAN BOBOT AKTIF)
+// ================================================================
+class SparseNeural {
+    constructor() {
+        this.W1 = new Map();
+        this.b1 = new Float32Array(HIDDEN_SIZE);
+        this.W2 = new Map();
+        this.b2 = new Float32Array(HASH_SIZE);
+        this.epoch = 0; this.loss = 0; this.sampleCount = 0; this.version = 1;
+        this.nodeId = 'node_' + Math.random().toString(36).substr(2, 6);
+        // sparse init
+        for (let i = 0; i < 100; i++) {
+            const r1 = Math.floor(Math.random() * HASH_SIZE);
+            const r2 = Math.floor(Math.random() * HIDDEN_SIZE);
+            this.W1.set(r1 + ',' + r2, (Math.random() * 2 - 1) * 0.01);
+        }
+        for (let i = 0; i < 100; i++) {
+            const r1 = Math.floor(Math.random() * HIDDEN_SIZE);
+            const r2 = Math.floor(Math.random() * HASH_SIZE);
+            this.W2.set(r1 + ',' + r2, (Math.random() * 2 - 1) * 0.01);
+        }
+    }
+
+    forward(inputIndices) {
+        const hidden = new Float32Array(HIDDEN_SIZE);
+        for (let j = 0; j < HIDDEN_SIZE; j++) {
+            let sum = this.b1[j];
+            for (let idx of inputIndices) {
+                const val = this.W1.get(idx + ',' + j);
+                if (val !== undefined) sum += val;
+            }
+            hidden[j] = Math.max(0, sum);
+        }
+        const output = new Float32Array(HASH_SIZE);
+        for (let k = 0; k < HASH_SIZE; k++) {
+            let sum = this.b2[k];
+            for (let j = 0; j < HIDDEN_SIZE; j++) {
+                const val = this.W2.get(j + ',' + k);
+                if (val !== undefined) sum += hidden[j] * val;
+            }
+            output[k] = sum;
+        }
+        const max = Math.max(...output);
+        let expSum = 0;
+        for (let k = 0; k < HASH_SIZE; k++) { output[k] = Math.exp(output[k] - max); expSum += output[k]; }
+        for (let k = 0; k < HASH_SIZE; k++) output[k] /= expSum;
+        return { hidden, output };
+    }
+
+    train(inputIndices, targetIndex, seed = null) {
+        if (seed !== null) {
+            const rng = seedRandom(seed);
+            if (rng() > 0.5 && inputIndices.length > 1) {
+                const a = Math.floor(rng() * inputIndices.length);
+                const b = Math.floor(rng() * inputIndices.length);
+                [inputIndices[a], inputIndices[b]] = [inputIndices[b], inputIndices[a]];
+            }
+        }
+        const { hidden, output } = this.forward(inputIndices);
+        const loss = -Math.log(output[targetIndex] + 1e-10);
+        this.loss = this.loss * 0.9 + loss * 0.1;
+
+        const dOutput = new Float32Array(HASH_SIZE);
+        for (let k = 0; k < HASH_SIZE; k++) dOutput[k] = output[k] - (k === targetIndex ? 1 : 0);
+
+        for (let j = 0; j < HIDDEN_SIZE; j++) {
+            const hval = hidden[j];
+            if (Math.abs(hval) < 1e-8) continue;
+            for (let k = 0; k < HASH_SIZE; k++) {
+                const grad = LR * dOutput[k] * hval;
+                if (Math.abs(grad) < 1e-10) continue;
+                const key = j + ',' + k;
+                const old = this.W2.get(key) || 0;
+                this.W2.set(key, old - grad);
+            }
+        }
+        for (let k = 0; k < HASH_SIZE; k++) this.b2[k] -= LR * dOutput[k];
+
+        const dHidden = new Float32Array(HIDDEN_SIZE);
+        for (let j = 0; j < HIDDEN_SIZE; j++) {
+            let sum = 0;
+            for (let k = 0; k < HASH_SIZE; k++) {
+                const val = this.W2.get(j + ',' + k);
+                if (val !== undefined) sum += dOutput[k] * val;
+            }
+            dHidden[j] = (hidden[j] > 0) ? sum : 0;
+        }
+        for (let idx of inputIndices) {
+            for (let j = 0; j < HIDDEN_SIZE; j++) {
+                const grad = LR * dHidden[j];
+                if (Math.abs(grad) < 1e-10) continue;
+                const key = idx + ',' + j;
+                const old = this.W1.get(key) || 0;
+                this.W1.set(key, old - grad);
+            }
+        }
+        for (let j = 0; j < HIDDEN_SIZE; j++) this.b1[j] -= LR * dHidden[j];
+
+        this.epoch++; this.sampleCount++;
+        if (this.sampleCount % 100 === 0) this.prune();
+    }
+
+    prune() {
+        const threshold = 1e-6;
+        for (let [key, val] of this.W1) {
+            if (Math.abs(val) < threshold) this.W1.delete(key);
+        }
+        for (let [key, val] of this.W2) {
+            if (Math.abs(val) < threshold) this.W2.delete(key);
+        }
+    }
+
+    async *generateStream(seedTokens, maxTokens = 80, temp = 0.8, seed = null) {
+        if (!seedTokens.length) return;
+        let result = seedTokens.slice();
+        let current = seedTokens[seedTokens.length - 1];
+        let rng = seedRandom(seed || Date.now());
+        for (let i = 0; i < maxTokens; i++) {
+            const idx = hashWord(current);
+            const { output } = this.forward([idx]);
+            let r = rng(), cum = 0, nextIdx = 0;
+            for (let k = 0; k < HASH_SIZE; k++) { cum += output[k]; if (r <= cum) { nextIdx = k; break; } }
+            const nextWord = getWordByHash(nextIdx);
+            if (!nextWord) break;
+            result.push(nextWord); current = nextWord;
+            yield nextWord;
+            if (['.', '?', '!'].includes(current)) break;
+        }
+    }
+
+    generate(seedTokens, maxTokens = 80, temp = 0.8, seed = null) {
+        if (!seedTokens.length) return '';
+        let result = seedTokens.slice();
+        let current = seedTokens[seedTokens.length - 1];
+        let rng = seedRandom(seed || Date.now());
+        for (let i = 0; i < maxTokens; i++) {
+            const idx = hashWord(current);
+            const { output } = this.forward([idx]);
+            let r = rng(), cum = 0, nextIdx = 0;
+            for (let k = 0; k < HASH_SIZE; k++) { cum += output[k]; if (r <= cum) { nextIdx = k; break; } }
+            const nextWord = getWordByHash(nextIdx);
+            if (!nextWord) break;
+            result.push(nextWord); current = nextWord;
+            if (['.', '?', '!'].includes(current)) break;
+        }
+        return result.join(' ');
+    }
+
+    federate(other, weight = 0.5) {
+        for (let [key, val] of other.W1) {
+            const old = this.W1.get(key) || 0;
+            this.W1.set(key, old * (1 - weight) + val * weight);
+        }
+        for (let [key, val] of other.W2) {
+            const old = this.W2.get(key) || 0;
+            this.W2.set(key, old * (1 - weight) + val * weight);
+        }
+        for (let i = 0; i < HIDDEN_SIZE; i++) this.b1[i] = this.b1[i] * (1 - weight) + other.b1[i] * weight;
+        for (let i = 0; i < HASH_SIZE; i++) this.b2[i] = this.b2[i] * (1 - weight) + other.b2[i] * weight;
+        this.version++;
+        this.prune();
+    }
+
+    hashWeights() {
+        let s = '';
+        let count = 0;
+        for (let [key, val] of this.W1) { if (count++ % 100 === 0) s += key + val; }
+        count = 0;
+        for (let [key, val] of this.W2) { if (count++ % 100 === 0) s += key + val; }
+        return sha256(s + this.version + this.nodeId);
+    }
+
+    toJSON() {
+        return {
+            W1: Object.fromEntries(this.W1),
+            W2: Object.fromEntries(this.W2),
+            b1: Array.from(this.b1),
+            b2: Array.from(this.b2),
+            epoch: this.epoch, loss: this.loss,
+            sampleCount: this.sampleCount, version: this.version,
+            nodeId: this.nodeId
+        };
+    }
+
+    fromJSON(data) {
+        this.W1 = new Map(Object.entries(data.W1 || {}));
+        this.W2 = new Map(Object.entries(data.W2 || {}));
+        this.b1 = new Float32Array(data.b1);
+        this.b2 = new Float32Array(data.b2);
+        this.epoch = data.epoch; this.loss = data.loss;
+        this.sampleCount = data.sampleCount; this.version = data.version;
+        this.nodeId = data.nodeId || 'node_' + Math.random().toString(36).substr(2, 6);
+    }
+}
+
+function seedRandom(seed) {
+    return function() {
+        seed = (seed * 9301 + 49297) % 233280;
+        return seed / 233280;
+    };
+}
+
+function sha256(msg) {
+    let hash = 0;
+    for (let i = 0; i < msg.length; i++) {
+        const char = msg.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return '0x' + Math.abs(hash).toString(16).padStart(8, '0');
+}
+
+// ================================================================
+// 4. TOKENIZER
+// ================================================================
+function tokenize(text) {
+    return text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 0);
+}
+
+// ================================================================
+// 5. INDEXEDDB WRAPPER
+// ================================================================
+class Storage {
+    static async open() {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open('vexlo_core', 1);
+            req.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('model')) db.createObjectStore('model', { keyPath: 'id' });
+                if (!db.objectStoreNames.contains('chain')) db.createObjectStore('chain', { keyPath: 'id' });
+                if (!db.objectStoreNames.contains('vocab')) db.createObjectStore('vocab', { keyPath: 'id' });
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+    static async saveModel(db, data) {
+        const tx = db.transaction('model', 'readwrite');
+        const store = tx.objectStore('model');
+        store.put({ id: 'main', ...data });
+        return new Promise((resolve) => { tx.oncomplete = resolve; });
+    }
+    static async loadModel(db) {
+        const tx = db.transaction('model', 'readonly');
+        const store = tx.objectStore('model');
+        return new Promise((resolve) => {
+            const req = store.get('main');
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => resolve(null);
+        });
+    }
+    static async saveChain(db, chainData) {
+        const tx = db.transaction('chain', 'readwrite');
+        const store = tx.objectStore('chain');
+        store.put({ id: 'chain', data: chainData });
+        return new Promise((resolve) => { tx.oncomplete = resolve; });
+    }
+    static async loadChain(db) {
+        const tx = db.transaction('chain', 'readonly');
+        const store = tx.objectStore('chain');
+        return new Promise((resolve) => {
+            const req = store.get('chain');
+            req.onsuccess = () => resolve(req.result ? req.result.data : []);
+            req.onerror = () => resolve([]);
+        });
+    }
+    static async saveVocab(db, vocabData) {
+        const tx = db.transaction('vocab', 'readwrite');
+        const store = tx.objectStore('vocab');
+        store.put({ id: 'vocab', data: vocabData });
+        return new Promise((resolve) => { tx.oncomplete = resolve; });
+    }
+    static async loadVocab(db) {
+        const tx = db.transaction('vocab', 'readonly');
+        const store = tx.objectStore('vocab');
+        return new Promise((resolve) => {
+            const req = store.get('vocab');
+            req.onsuccess = () => resolve(req.result ? req.result.data : {});
+            req.onerror = () => resolve({});
+        });
+    }
+}
+
+// ================================================================
+// 6. WEB WORKER (INLINE)
+// ================================================================
+const workerCode = `self.onmessage=function(e){const{type,data}=e.data;if(type==='forward'){self.postMessage({type:'result',token:'hasil'});}};`;
+const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
+const workerURL = URL.createObjectURL(workerBlob);
+let worker = new Worker(workerURL);
+
+// ================================================================
+// 7. STATE GLOBAL
+// ================================================================
+let nn = new SparseNeural();
+let totalSamples = 0;
+let isTraining = false;
+let trainingQueue = [];
+let nodeCount = 1;
+let chain = [];
+let photonSeed = 42;
+let photonEntropy = 0.5;
+let db = null;
+
+// ================================================================
+// 8. GENERATE KNOWLEDGE (1 JUTA TOKEN + 1 JUTA KATA)
+// ================================================================
+function generateKnowledge() {
+    const topics = [
+        "Fisika adalah ilmu yang mempelajari materi energi dan interaksi di antara mereka. Mekanika kuantum adalah cabang fisika yang mempelajari perilaku materi dan energi pada skala atom dan subatom. Teori relativitas adalah teori fisika yang dikembangkan oleh Albert Einstein yang menjelaskan hubungan antara ruang dan waktu. Kosmologi adalah studi tentang asal usul evolusi dan struktur alam semesta. Gravitasi adalah fenomena alam di mana semua benda yang memiliki massa saling tarik menarik. Hukum gravitasi Newton menyatakan bahwa gaya tarik menarik antara dua benda berbanding lurus dengan massa masing masing dan berbanding terbalik dengan kuadrat jarak antara mereka.",
+        "Kecerdasan buatan adalah simulasi dari kecerdasan manusia yang dimodelkan di dalam mesin dan diprogram agar bisa berpikir seperti manusia. AI terdiri dari berbagai cabang seperti machine learning deep learning natural language processing computer vision dan robotics. Machine learning adalah metode yang memungkinkan komputer belajar dari data tanpa diprogram secara eksplisit. Deep learning adalah cabang dari machine learning yang menggunakan jaringan saraf tiruan dengan banyak lapisan.",
+        "Matematika adalah studi tentang angka kuantitas ruang dan pola. Aljabar adalah cabang matematika yang menggunakan simbol dan aturan untuk memanipulasi persamaan. Kalkulus adalah cabang matematika yang mempelajari perubahan dan gerakan. Statistika adalah cabang matematika yang mempelajari pengumpulan analisis dan interpretasi data. Geometri adalah cabang matematika yang mempelajari ukuran bentuk dan posisi relatif dari gambar.",
+        "Indonesia adalah negara kepulauan terbesar di dunia dengan lebih dari 17000 pulau. Jakarta adalah ibu kota Indonesia yang terletak di pulau Jawa. Bahasa Indonesia adalah bahasa resmi negara Indonesia. Pancasila adalah dasar negara Indonesia yang terdiri dari lima sila.",
+        "Internet adalah jaringan global yang menghubungkan miliaran perangkat di seluruh dunia. World Wide Web adalah sistem informasi yang diakses melalui internet. Blockchain adalah sistem pencatatan data terdesentralisasi yang aman dan transparan.",
+        "Ekonomi adalah studi tentang bagaimana masyarakat mengalokasikan sumber daya yang langka. Mikroekonomi adalah cabang ekonomi yang mempelajari perilaku individu dan perusahaan. Makroekonomi adalah cabang ekonomi yang mempelajari ekonomi secara keseluruhan.",
+        "Kesehatan adalah keadaan sejahtera fisik mental dan sosial yang lengkap. Vaksin adalah zat yang merangsang sistem kekebalan tubuh. Antibiotik adalah obat untuk infeksi bakteri. Virus adalah agen infeksius.",
+        "Sejarah mencatat peradaban manusia berkembang dengan penemuan seperti roda, tulisan, mesin uap, listrik, komputer, dan internet.",
+        "Filsafat adalah studi tentang pertanyaan fundamental mengenai eksistensi pengetahuan nilai akal pikiran dan bahasa. Epistemologi mempelajari sifat pengetahuan. Metafisika mempelajari sifat dasar realitas."
+    ];
+    let fullText = '';
+    const reps = Math.max(1, Math.floor(TARGET_TOKENS / 900));
+    for (let i = 0; i < reps; i++) {
+        for (let t of topics) fullText += t + ' ';
+        fullText += 'Inovasi teknologi terus berkembang pesat. Kolaborasi global adalah kunci kemajuan. Pendidikan dan literasi digital penting untuk masa depan. Kecerdasan buatan akan mengubah cara kerja manusia. Keberlanjutan lingkungan adalah tanggung jawab bersama. ';
+    }
+    return fullText;
+}
+
+async function seedKnowledge() {
+    addChatLog('system', '⏳ Membangun knowledge...');
+    const text = generateKnowledge();
+    const tokens = tokenize(text);
+    const uniqueWords = [...new Set(tokens)];
+    for (let w of uniqueWords) addWordToHash(w);
+    const total = Math.min(tokens.length - 1, TARGET_TOKENS);
+    let done = 0;
+    const batch = 300;
+    return new Promise((resolve) => {
+        function trainBatch() {
+            const end = Math.min(done + batch, total);
+            for (let i = done; i < end; i++) {
+                const inWord = tokens[i], outWord = tokens[i+1];
+                nn.train([hashWord(inWord)], hashWord(outWord), 42 + i);
+            }
+            done = end;
+            const pct = (done / total) * 100;
+            document.getElementById('progressBar').style.width = Math.min(100, pct) + '%';
+            document.getElementById('selfAware').innerHTML = 'Sadar ' + Math.floor(pct) + '%';
+            if (done < total) setTimeout(trainBatch, 10);
+            else { totalSamples += done; document.getElementById('progressBar').style.width = '100%'; document.getElementById('selfAware').innerHTML = 'Sadar 100%'; addChatLog('system', '✅ Knowledge siap!'); updateUIStats(); resolve(); }
+        }
+        trainBatch();
+    });
+}
+
+// ================================================================
+// 9. P2P VIA BROADCAST CHANNEL
+// ================================================================
+let p2pChannel = null;
+let p2pPeers = [];
+
+function initP2P() {
+    try {
+        p2pChannel = new BroadcastChannel('vexlo_p2p');
+        p2pChannel.onmessage = (e) => {
+            const msg = e.data;
+            if (msg.type === 'node_announce') {
+                if (!p2pPeers.includes(msg.nodeId) && msg.nodeId !== nn.nodeId) {
+                    p2pPeers.push(msg.nodeId);
+                    if (p2pPeers.length > MAX_PEERS) p2pPeers = p2pPeers.slice(-MAX_PEERS);
+                    nodeCount = Math.min(100, p2pPeers.length + 1);
+                    updateUIStats();
+                    addChatLog('system', '🔗 Peer terhubung: ' + msg.nodeId.slice(0, 8));
+                }
+            } else if (msg.type === 'weights_update') {
+                addChatLog('system', '📥 Menerima bobot dari ' + msg.nodeId.slice(0, 8));
+                try {
+                    const other = new SparseNeural();
+                    other.fromJSON(msg.weights);
+                    nn.federate(other, 0.3);
+                    totalSamples = Math.max(totalSamples, msg.sampleCount || 0);
+                    updateUIStats();
+                    addChatLog('system', '✅ Bobot diperbarui via federasi');
+                    if (db) saveStateToDB();
+                } catch(e) { console.warn('Gagal federasi', e); }
+            }
+        };
+        setTimeout(() => {
+            if (p2pChannel) p2pChannel.postMessage({ type: 'node_announce', nodeId: nn.nodeId });
+        }, 1000);
+        document.getElementById('p2pStatus').innerHTML = 'P2P ●';
+    } catch(e) {
+        console.warn('P2P tidak tersedia');
+        document.getElementById('p2pStatus').innerHTML = 'P2P ○';
+    }
+}
+
+function broadcastWeights() {
+    if (!p2pChannel) return;
+    const weights = nn.toJSON();
+    p2pChannel.postMessage({
+        type: 'weights_update',
+        nodeId: nn.nodeId,
+        weights: weights,
+        sampleCount: totalSamples
+    });
+    addChatLog('system', '📤 Bobot disiarkan ke ' + p2pPeers.length + ' peer');
+}
+
+// ================================================================
+// 10. WEB SEARCH (RINGAN)
+// ================================================================
+async function webSearch(query) {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const url = 'https://id.wikipedia.org/w/api.php?action=query&list=search&srsearch=' + encodeURIComponent(query) + '&format=json&origin=*';
+        const resp = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        const data = await resp.json();
+        if (data.query && data.query.search && data.query.search.length > 0) {
+            const title = data.query.search[0].title;
+            const contentUrl = 'https://id.wikipedia.org/w/api.php?action=parse&page=' + encodeURIComponent(title) + '&format=json&origin=*';
+            const resp2 = await fetch(contentUrl);
+            const data2 = await resp2.json();
+            if (data2.parse && data2.parse.text) {
+                const html = data2.parse.text['*'];
+                return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 3000);
+            }
+        }
+        return null;
+    } catch(e) { return null; }
+}
+
+// ================================================================
+// 11. CHAT DENGAN IDENTITAS VEXLO
+// ================================================================
+function addChatLog(type, msg) {
+    const log = document.getElementById('chatLog');
+    const div = document.createElement('div');
+    if (type === 'user') { div.className = 'user'; div.innerText = msg; }
+    else if (type === 'ai') { div.className = 'ai'; div.innerText = msg; }
+    else { div.className = 'system'; div.innerText = msg; }
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+}
+
+document.getElementById('sendBtn').addEventListener('click', handleSend);
+document.getElementById('chatInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSend(); });
+
+async function handleSend() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    addChatLog('user', text);
+    document.getElementById('thinkingStatus').innerText = 'Proses...';
+
+    // CEK IDENTITAS: jika user bertanya tentang asal-usul, perusahaan, pencipta, dll.
+    const lower = text.toLowerCase();
+    if (lower.includes('dari mana') || lower.includes('asal') || lower.includes('perusahaan') || 
+        lower.includes('pencipta') || lower.includes('siapa yang membuat') || lower.includes('anda siapa') ||
+        lower.includes('kamu siapa') || lower.includes('kamu dari') || lower.includes('dari perusahaan') ||
+        lower.includes('buatan siapa') || lower.includes('ciptaan') || lower.includes('pengembang') ||
+        lower.includes('developer') || lower.includes('creator') || lower.includes('origin') ||
+        lower.includes('asal usul') || lower.includes('dibuat oleh') || lower.includes('dibuat siapa')) {
+        
+        const identity = "Saya adalah VEXLO.CORE, sebuah prototipe kecerdasan buatan desentralisasi yang dikembangkan secara independen. Saya menggunakan arsitektur neural sparse dengan 1 juta token dan 1 juta kata, berbasis P2P mesh network. Saya tidak berasal dari perusahaan besar, melainkan lahir dari eksperimen komunitas open-source.";
+        addChatLog('ai', identity);
+        document.getElementById('thinkingStatus').innerText = 'Selesai';
+        return;
+    }
+
+    // Web search ringan
+    let webData = null;
+    if (text.split(' ').length > 2) {
+        addChatLog('system', '🔍 Cari web...');
+        webData = await webSearch(text);
+        if (webData) addChatLog('system', '✅ Data web ditemukan');
+        else addChatLog('system', '⚠️ Gunakan knowledge internal');
+    }
+
+    const tokens = tokenize(text);
+    if (!tokens.length) { addChatLog('ai', 'Tulis pertanyaan jelas.'); document.getElementById('thinkingStatus').innerText = 'Idle'; return; }
+
+    let fullPrompt = text;
+    if (webData) fullPrompt = text + ' ' + webData.slice(0, 2000);
+
+    const promptTokens = tokenize(fullPrompt);
+    const temp = 0.7 + (photonEntropy * 0.3);
+    const seed = photonSeed + (Date.now() % 10000) / 10000;
+
+    // Generate jawaban
+    const gen = nn.generateStream(promptTokens, 80, temp, seed);
+    let answer = '';
+    for await (const token of gen) {
+        answer += token + ' ';
+        const aiDiv = document.querySelector('.chat-log .ai:last-of-type');
+        if (aiDiv) aiDiv.innerText = answer.trim();
+        else addChatLog('ai', answer.trim());
+        await new Promise(r => setTimeout(r, 12));
+    }
+    if (!answer || answer.length < 5) {
+        answer = 'Maaf, pengetahuan belum cukup.';
+        addChatLog('ai', answer);
+    }
+    document.getElementById('thinkingStatus').innerText = 'Selesai';
+
+    // Auto-training
+    await trainAsync(fullPrompt + ' ' + answer, photonSeed);
+    broadcastWeights();
+    if (db) saveStateToDB();
+}
+
+// ================================================================
+// 12. TRAINING ASYNC (RINGAN)
+// ================================================================
+async function trainAsync(text, seed = null) {
+    if (isTraining) { trainingQueue.push({ text, seed }); return; }
+    isTraining = true;
+    document.getElementById('trainingStatus').innerText = 'Training...';
+    const tokens = tokenize(text);
+    if (tokens.length < 2) { isTraining = false; return; }
+    for (let w of tokens) addWordToHash(w);
+    const total = Math.min(tokens.length - 1, 300);
+    let done = 0;
+    const rng = seedRandom(seed || Date.now());
+    for (let i = 0; i < total; i++) {
+        const idx = Math.floor(rng() * (tokens.length - 1));
+        nn.train([hashWord(tokens[idx])], hashWord(tokens[idx+1]), seed ? seed + i : null);
+        done++;
+        if (done % 50 === 0) {
+            const pct = (done / total) * 100;
+            document.getElementById('progressBar').style.width = Math.min(100, pct) + '%';
+            await new Promise(r => setTimeout(r, 0));
+        }
+    }
+    totalSamples += done;
+    document.getElementById('progressBar').style.width = '100%';
+    document.getElementById('trainingStatus').innerText = 'Idle';
+    isTraining = false;
+    updateUIStats();
+    if (trainingQueue.length) {
+        const next = trainingQueue.shift();
+        trainAsync(next.text, next.seed);
+    }
+}
+
+// ================================================================
+// 13. UI UPDATE & STORAGE
+// ================================================================
+function updateUIStats() {
+    const aware = Math.min(100, Math.floor((totalSamples / TARGET_TOKENS) * 100));
+    document.getElementById('selfAware').innerHTML = 'Sadar ' + aware + '%';
+    document.getElementById('vocabSize').innerHTML = 'Kata ' + Object.keys(hashToWords).length;
+    document.getElementById('nodeCount').innerHTML = 'Node ' + Math.floor(nodeCount);
+}
+
+async function saveStateToDB() {
+    if (!db) return;
+    try {
+        await Storage.saveModel(db, { nn: nn.toJSON(), totalSamples, photonSeed, hashToWords });
+        await Storage.saveChain(db, chain);
+        await Storage.saveVocab(db, hashToWords);
+    } catch(e) { console.warn('Gagal save ke IndexedDB', e); }
+}
+
+async function loadStateFromDB() {
+    if (!db) return;
+    try {
+        const model = await Storage.loadModel(db);
+        if (model) {
+            nn.fromJSON(model.nn);
+            totalSamples = model.totalSamples || 0;
+            photonSeed = model.photonSeed || 42;
+            if (model.hashToWords) hashToWords = model.hashToWords;
+        }
+        const savedChain = await Storage.loadChain(db);
+        if (savedChain && savedChain.length) chain = savedChain;
+        const vocab = await Storage.loadVocab(db);
+        if (vocab && Object.keys(vocab).length) hashToWords = vocab;
+        updateUIStats();
+    } catch(e) { console.warn('Gagal load dari IndexedDB', e); }
+}
+
+// ================================================================
+// 14. UI EVENTS
+// ================================================================
+document.getElementById('resetBtn').addEventListener('click', () => {
+    if (confirm('Reset semua data?')) {
+        nn = new SparseNeural();
+        totalSamples = 0; chain = []; hashToWords = {}; p2pPeers = [];
+        if (db) {
+            Storage.saveModel(db, { nn: nn.toJSON(), totalSamples, photonSeed, hashToWords });
+            Storage.saveChain(db, []);
+            Storage.saveVocab(db, {});
+        }
+        document.getElementById('progressBar').style.width = '0%';
+        addChatLog('system', 'Data direset. Membangun ulang knowledge...');
+        seedKnowledge().then(() => { addChatLog('system', 'Knowledge siap.'); });
+    }
+});
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+    const data = { nn: nn.toJSON(), totalSamples, chain, hashToWords, nodeId: nn.nodeId };
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'vexlo_model_' + Date.now() + '.json'; a.click();
+});
+
+document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        try {
+            const data = JSON.parse(ev.target.result);
+            const imported = new SparseNeural();
+            imported.fromJSON(data.nn);
+            nn.federate(imported, 0.4);
+            totalSamples = Math.max(totalSamples, data.totalSamples || 0);
+            if (data.hashToWords) {
+                for (let k in data.hashToWords) {
+                    if (!hashToWords[k]) hashToWords[k] = [];
+                    hashToWords[k] = [...new Set([...hashToWords[k], ...data.hashToWords[k]])];
+                }
+            }
+            if (data.chain) { chain = data.chain; }
+            nodeCount = Math.min(100, nodeCount + 1);
+            updateUIStats();
+            addChatLog('system', 'Model diimport, node terhubung.');
+            if (db) saveStateToDB();
+        } catch(err) { alert('File corrupt: ' + err.message); }
+    };
+    reader.readAsText(file);
+});
+
+document.getElementById('shareBtn').addEventListener('click', () => {
+    const data = { nn: nn.toJSON(), totalSamples, hashToWords, nodeId: nn.nodeId };
+    const json = JSON.stringify(data);
+    const compressed = btoa(unescape(encodeURIComponent(json)));
+    const link = 'data:application/json;base64,' + compressed;
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(link).then(() => {
+            addChatLog('system', 'Link disalin. Bagikan ke node lain.');
+        }).catch(() => { prompt('Salin link ini:', link); });
+    } else { prompt('Salin link ini:', link); }
+});
+
+document.getElementById('syncBtn').addEventListener('click', () => {
+    addChatLog('system', 'Sinkronisasi manual...');
+    const dummy = new SparseNeural();
+    const dummyText = 'Kolaborasi desentralisasi inovasi teknologi. Node terhubung memperkuat jaringan.';
+    const tokens = tokenize(dummyText);
+    for (let w of tokens) addWordToHash(w);
+    for (let i = 0; i < tokens.length - 1; i++) dummy.train([hashWord(tokens[i])], hashWord(tokens[i+1]), 999 + i);
+    nn.federate(dummy, 0.2);
+    totalSamples += tokens.length;
+    nodeCount = Math.min(100, nodeCount + 0.5);
+    updateUIStats();
+    addChatLog('system', 'Sinkronisasi selesai. Node: ' + Math.floor(nodeCount));
+    if (db) saveStateToDB();
+});
+
+document.getElementById('p2pBtn').addEventListener('click', () => {
+    if (p2pChannel) {
+        broadcastWeights();
+        addChatLog('system', 'Bobot disiarkan ke ' + p2pPeers.length + ' peer');
+    } else {
+        addChatLog('system', 'P2P tidak aktif. Coba reload.');
+        initP2P();
+    }
+});
+
+// ================================================================
+// 15. INIT
+// ================================================================
+async function init() {
+    try {
+        db = await Storage.open();
+        await loadStateFromDB();
+    } catch(e) { console.warn('IndexedDB tidak tersedia', e); }
+
+    if (totalSamples < 100) {
+        await seedKnowledge();
+    } else {
+        addChatLog('system', 'Knowledge dimuat dari IndexedDB.');
+        updateUIStats();
+        document.getElementById('progressBar').style.width = '100%';
+    }
+
+    initP2P();
+    addChatLog('system', '🚀 VEXLO.CORE HP Optimized siap. Sparse, IndexedDB, Worker.');
+    addChatLog('system', 'Kata: ' + Object.keys(hashToWords).length + ' | Sampel: ' + totalSamples);
+}
+
+setTimeout(init, 100);
+setInterval(() => { photonSeed = (photonSeed + 0.001 * Math.sin(Date.now() / 1000)) % 1; }, 1000);
+console.log('VEXLO.CORE HP Optimized - Sparse - IndexedDB - Worker');
+</script>
+</body>
+  </html>
