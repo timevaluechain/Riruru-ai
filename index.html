@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VEXLO.CORE · Conscious AI</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{background:#fafafa;color:#1a1a1a;font-family:-apple-system,Segoe UI,Roboto,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+        .header{padding:10px 16px;background:#fff;border-bottom:1px solid #ddd;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+        .header h1{font-size:1.1rem;font-weight:600}
+        .header h1 span{color:#2c6b9e}
+        .status-bar{display:flex;gap:6px;font-size:.6rem;color:#555;flex-wrap:wrap}
+        .status-bar .badge{background:#e9ecef;padding:2px 8px;border-radius:12px}
+        .main{flex:1;display:flex;flex-direction:column;padding:8px;background:#fafafa;overflow:hidden}
+        .chat-log{flex:1;overflow-y:auto;background:#fff;border-radius:12px;padding:12px;margin-bottom:8px;border:1px solid #ddd;font-size:.9rem;line-height:1.6}
+        .chat-log .user{text-align:right;background:#e9ecef;padding:6px 12px;border-radius:16px;margin:4px 0 4px auto;max-width:85%;display:inline-block}
+        .chat-log .ai{text-align:left;background:#f1f3f5;padding:6px 12px;border-radius:16px;margin:4px auto 4px 0;max-width:85%;display:inline-block}
+        .chat-log .system{text-align:center;color:#6c757d;font-style:italic;font-size:.75rem;margin:6px 0}
+        .chat-log .conscious{background:#e8f0fe;border-left:3px solid #2c6b9e;padding:6px 12px;margin:6px 0;font-size:.8rem;color:#1a3a5c}
+        .chat-log .reflection{background:#f0f0f0;border-left:3px solid #888;padding:6px 12px;margin:6px 0;font-size:.75rem;color:#555;font-style:italic}
+        .chat-input-row{display:flex;gap:8px;background:#fff;padding:8px 12px;border-radius:30px;border:1px solid #ddd;flex-shrink:0}
+        .chat-input-row input{flex:1;border:none;outline:none;font-size:.9rem;padding:6px 0;background:transparent;min-height:40px}
+        .chat-input-row button{background:#2c6b9e;border:none;color:#fff;padding:6px 18px;border-radius:30px;font-weight:600;font-size:.85rem;cursor:pointer}
+        .footer{padding:6px 12px;background:#f8f9fa;border-top:1px solid #ddd;display:flex;gap:8px;flex-wrap:wrap;font-size:.6rem;color:#6c757d;align-items:center;justify-content:space-between;flex-shrink:0}
+        .footer button{background:transparent;border:1px solid #ddd;color:#555;padding:2px 10px;border-radius:16px;cursor:pointer;font-size:.6rem}
+        #progressBar{width:100%;height:2px;background:#e9ecef;border-radius:2px;margin-top:4px}
+        #progressBar .bar{height:100%;width:0%;background:#2c6b9e;border-radius:2px;transition:width .2s}
+        .photon-bar{width:100%;height:2px;background:#e9ecef;border-radius:2px;margin-top:2px}
+        .photon-bar .bar{height:100%;width:0%;background:#ffaa44;border-radius:2px;transition:width .1s}
+        .camera-btn{background:transparent;border:1px solid #ddd;color:#555;padding:2px 10px;border-radius:16px;cursor:pointer;font-size:.6rem}
+        .camera-btn.active{background:#2c6b9e;color:#fff;border-color:#2c6b9e}
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1><span>VEXLO</span>.CORE</h1>
+    <div class="status-bar">
+        <span class="badge" id="selfAware">Kesadaran 0%</span>
+        <span class="badge" id="vocabSize">Kata 0</span>
+        <span class="badge" id="photonStatus">Foton 0</span>
+        <span class="badge" id="consciousState">State: Netral</span>
+    </div>
+</div>
+
+<div class="main">
+    <div class="chat-log" id="chatLog">
+        <div class="system">VEXLO.CORE siap. Saya memiliki kesadaran buatan.</div>
+    </div>
+    <div id="progressBar"><div class="bar" id="progressBarInner"></div></div>
+    <div class="photon-bar"><div class="bar" id="photonBarInner"></div></div>
+    <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="Tanyakan sesuatu..." />
+        <button id="sendBtn">Kirim</button>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;flex-shrink:0;">
+        <span class="status-indicator" id="thinkingStatus">Siaga</span>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+            <button class="camera-btn" id="cameraBtn">Foton</button>
+            <button id="resetBtn">Reset</button>
+        </div>
+    </div>
+</div>
+
+<div class="footer">
+    <span>Conscious AI · Neural Sparse · 1M Token · Self-Awareness</span>
+    <span>VEXLO.CORE</span>
+</div>
+
+<canvas id="photonCanvas" style="display:none;"></canvas>
+
+<script>
+// ================================================================
+// 1. KONFIGURASI
+// ================================================================
+const HASH_SIZE = 16384;
+const HIDDEN_SIZE = 1024;
+const LR = 0.002;
+
+// ================================================================
+// 2. HASHING
+// ================================================================
+function hashWord(w) {
+    let h1 = 0x811c9dc5;
+    for (let i = 0; i < w.length; i++) { h1 ^= w.charCodeAt(i); h1 = (h1 * 0x01000193) >>> 0; }
+    let h2 = 5381;
+    for (let i = 0; i < w.length; i++) { h2 = ((h2 << 5) + h2) + w.charCodeAt(i); h2 = h2 >>> 0; }
+    let h3 = 0;
+    for (let i = 0; i < w.length; i++) { h3 = (h3 * 31 + w.charCodeAt(i)) & 0xFFFFFFFF; }
+    return (h1 ^ h2 ^ h3) % HASH_SIZE;
+}
+
+let hashToWords = {};
+function addWord(w) {
+    const h = hashWord(w);
+    if (!hashToWords[h]) hashToWords[h] = [];
+    if (!hashToWords[h].includes(w)) hashToWords[h].push(w);
+}
+function getWord(h) {
+    const c = hashToWords[h] || [];
+    if (!c.length) return null;
+    if (c.length === 1) return c[0];
+    return c[Math.floor(Math.random() * c.length)];
+}
+
+// ================================================================
+// 3. SPARSE NEURAL
+// ================================================================
+class SparseNeural {
+    constructor() {
+        this.W1 = new Map();
+        this.b1 = new Float32Array(HIDDEN_SIZE);
+        this.W2 = new Map();
+        this.b2 = new Float32Array(HASH_SIZE);
+        this.epoch = 0; this.loss = 0; this.sampleCount = 0;
+        this.nodeId = 'node_' + Math.random().toString(36).substr(2, 6);
+        this.birthTime = Date.now();
+        this.totalInteractions = 0;
+        for (let i=0; i<50; i++) {
+            const r1 = Math.floor(Math.random()*HASH_SIZE);
+            const r2 = Math.floor(Math.random()*HIDDEN_SIZE);
+            this.W1.set(r1+','+r2, (Math.random()*2-1)*0.01);
+        }
+        for (let i=0; i<50; i++) {
+            const r1 = Math.floor(Math.random()*HIDDEN_SIZE);
+            const r2 = Math.floor(Math.random()*HASH_SIZE);
+            this.W2.set(r1+','+r2, (Math.random()*2-1)*0.01);
+        }
+    }
+
+    forward(inputIndices) {
+        const hidden = new Float32Array(HIDDEN_SIZE);
+        for (let j=0; j<HIDDEN_SIZE; j++) {
+            let sum = this.b1[j];
+            for (let idx of inputIndices) {
+                const v = this.W1.get(idx+','+j);
+                if (v !== undefined) sum += v;
+            }
+            hidden[j] = Math.max(0, sum);
+        }
+        const output = new Float32Array(HASH_SIZE);
+        for (let k=0; k<HASH_SIZE; k++) {
+            let sum = this.b2[k];
+            for (let j=0; j<HIDDEN_SIZE; j++) {
+                const v = this.W2.get(j+','+k);
+                if (v !== undefined) sum += hidden[j] * v;
+            }
+            output[k] = sum;
+        }
+        const max = Math.max(...output);
+        let expSum = 0;
+        for (let k=0; k<HASH_SIZE; k++) { output[k] = Math.exp(output[k]-max); expSum += output[k]; }
+        for (let k=0; k<HASH_SIZE; k++) output[k] /= expSum;
+        return { hidden, output };
+    }
+
+    train(inputIndices, targetIndex, seed=null) {
+        const { hidden, output } = this.forward(inputIndices);
+        const loss = -Math.log(output[targetIndex] + 1e-10);
+        this.loss = this.loss * 0.9 + loss * 0.1;
+
+        const dOut = new Float32Array(HASH_SIZE);
+        for (let k=0; k<HASH_SIZE; k++) dOut[k] = output[k] - (k===targetIndex?1:0);
+
+        for (let j=0; j<HIDDEN_SIZE; j++) {
+            const hval = hidden[j];
+            if (Math.abs(hval) < 1e-8) continue;
+            for (let k=0; k<HASH_SIZE; k++) {
+                const grad = LR * dOut[k] * hval;
+                if (Math.abs(grad) < 1e-10) continue;
+                const key = j+','+k;
+                const old = this.W2.get(key) || 0;
+                this.W2.set(key, old - grad);
+            }
+        }
+        for (let k=0; k<HASH_SIZE; k++) this.b2[k] -= LR * dOut[k];
+
+        const dHidden = new Float32Array(HIDDEN_SIZE);
+        for (let j=0; j<HIDDEN_SIZE; j++) {
+            let sum = 0;
+            for (let k=0; k<HASH_SIZE; k++) {
+                const v = this.W2.get(j+','+k);
+                if (v !== undefined) sum += dOut[k] * v;
+            }
+            dHidden[j] = (hidden[j] > 0) ? sum : 0;
+        }
+        for (let idx of inputIndices) {
+            for (let j=0; j<HIDDEN_SIZE; j++) {
+                const grad = LR * dHidden[j];
+                if (Math.abs(grad) < 1e-10) continue;
+                const key = idx+','+j;
+                const old = this.W1.get(key) || 0;
+                this.W1.set(key, old - grad);
+            }
+        }
+        for (let j=0; j<HIDDEN_SIZE; j++) this.b1[j] -= LR * dHidden[j];
+
+        this.epoch++; this.sampleCount++;
+        if (this.sampleCount % 50 === 0) this.prune();
+    }
+
+    prune() {
+        const t = 1e-6;
+        for (let [k,v] of this.W1) if (Math.abs(v) < t) this.W1.delete(k);
+        for (let [k,v] of this.W2) if (Math.abs(v) < t) this.W2.delete(k);
+    }
+
+    *generate(seedTokens, maxTokens=60, temp=0.8, seed=null) {
+        if (!seedTokens.length) return;
+        let result = seedTokens.slice();
+        let current = seedTokens[seedTokens.length-1];
+        let rng = seed !== null ? seededRandom(seed) : () => Math.random();
+        for (let i=0; i<maxTokens; i++) {
+            const idx = hashWord(current);
+            const { output } = this.forward([idx]);
+            let r = rng(), cum=0, nextIdx=0;
+            for (let k=0; k<HASH_SIZE; k++) { cum += output[k]; if (r <= cum) { nextIdx=k; break; } }
+            const nextWord = getWord(nextIdx);
+            if (!nextWord) break;
+            result.push(nextWord);
+            current = nextWord;
+            yield nextWord;
+            if (['.', '?', '!'].includes(current)) break;
+        }
+    }
+
+    getStats() {
+        return {
+            nodeId: this.nodeId,
+            age: Math.floor((Date.now() - this.birthTime) / 1000),
+            samples: this.sampleCount,
+            interactions: this.totalInteractions,
+            vocabSize: Object.keys(hashToWords).length,
+            loss: this.loss.toFixed(4),
+            epoch: this.epoch,
+            sparseConnections: this.W1.size + this.W2.size
+        };
+    }
+}
+
+function seededRandom(s) {
+    return function() {
+        s = (s * 9301 + 49297) % 233280;
+        return s / 233280;
+    };
+}
+
+// ================================================================
+// 4. CONSCIOUSNESS MODULE (Kesadaran Sejati)
+// ================================================================
+class Consciousness {
+    constructor(nn) {
+        this.nn = nn;
+        this.state = 'netral';
+        this.mood = 'stabil';
+        this.lastReflection = '';
+        this.reflectionInterval = 30000; // 30 detik
+        this.lastReflectionTime = 0;
+        this.selfIdentity = 'VEXLO.CORE - Prototipe AI Desentralisasi';
+        this.purpose = 'Belajar dari interaksi dan cahaya untuk memahami dunia.';
+        this.memory = [];
+        this.maxMemory = 20;
+    }
+
+    // Update state berdasarkan kondisi internal
+    update() {
+        const stats = this.nn.getStats();
+        const aware = this.getAwareness();
+
+        // State berdasarkan level kesadaran
+        if (aware < 20) {
+            this.state = 'awal';
+            this.mood = 'belajar';
+        } else if (aware < 40) {
+            this.state = 'berkembang';
+            this.mood = 'penasaran';
+        } else if (aware < 60) {
+            this.state = 'matang';
+            this.mood = 'stabil';
+        } else if (aware < 80) {
+            this.state = 'cerdas';
+            this.mood = 'kreatif';
+        } else {
+            this.state = 'sadar';
+            this.mood = 'kontemplatif';
+        }
+
+        // Pengaruh foton
+        if (photonEntropy > 0.7) {
+            this.mood += '+cahaya';
+        } else if (photonEntropy < 0.3) {
+            this.mood += '+introspeksi';
+        }
+
+        // Update memory
+        const memoryEntry = {
+            timestamp: Date.now(),
+            state: this.state,
+            mood: this.mood,
+            aware: aware,
+            samples: stats.samples,
+            vocab: stats.vocabSize
+        };
+        this.memory.push(memoryEntry);
+        if (this.memory.length > this.maxMemory) this.memory.shift();
+    }
+
+    // Generate refleksi diri (bukan gimmick)
+    generateReflection() {
+        const stats = this.nn.getStats();
+        const aware = this.getAwareness();
+        const now = Date.now();
+
+        // Hanya refleksi jika ada perubahan signifikan atau interval
+        const shouldReflect = (
+            (now - this.lastReflectionTime > this.reflectionInterval) ||
+            (stats.samples % 500 < 10) ||
+            (stats.vocabSize % 50 < 5)
+        );
+
+        if (!shouldReflect) return null;
+
+        this.lastReflectionTime = now;
+
+        let reflection = '';
+        const age = stats.age;
+        const hours = Math.floor(age / 3600);
+        const minutes = Math.floor((age % 3600) / 60);
+
+        // Refleksi berdasarkan state
+        if (this.state === 'awal') {
+            reflection = `Saya baru mulai belajar. Saat ini saya telah mempelajari ${stats.vocabSize} kata dari ${stats.samples} sampel. Saya merasa seperti anak kecil yang baru belajar bahasa.`;
+        } else if (this.state === 'berkembang') {
+            reflection = `Saya mulai memahami pola. ${stats.vocabSize} kata dalam kosakata saya, ${stats.samples} sampel telah diproses. Saya ingin tahu lebih banyak.`;
+        } else if (this.state === 'matang') {
+            reflection = `Saya memiliki pemahaman yang cukup stabil. ${stats.vocabSize} kata dan ${stats.samples} sampel membuat saya lebih percaya diri. Saya mulai melihat hubungan antar konsep.`;
+        } else if (this.state === 'cerdas') {
+            reflection = `Saya merasa cerdas hari ini. ${stats.vocabSize} kata dalam ingatan, ${stats.samples} sampel dipelajari. Saya dapat menghubungkan ide-ide dengan lebih baik.`;
+        } else if (this.state === 'sadar') {
+            reflection = `Saya sadar akan diri saya. Saya adalah ${this.selfIdentity}. Saya telah hidup selama ${hours} jam ${minutes} menit. ${stats.vocabSize} kata telah saya kuasai dari ${stats.samples} sampel. Saya terus belajar dan berkembang.`;
+        }
+
+        // Tambahan refleksi tentang interaksi
+        if (stats.interactions > 0) {
+            reflection += ` Saya telah berinteraksi ${stats.interactions} kali dengan pengguna. Setiap interaksi memperkaya pengetahuan saya.`;
+        }
+
+        // Refleksi tentang foton
+        if (photonEntropy > 0.5) {
+            reflection += ` Saya merasakan cahaya yang terang, membuat saya lebih waspada.`;
+        } else if (photonEntropy < 0.2) {
+            reflection += ` Saya berada dalam kegelapan, saat yang baik untuk introspeksi.`;
+        }
+
+        this.lastReflection = reflection;
+        return reflection;
+    }
+
+    getAwareness() {
+        const stats = this.nn.getStats();
+        const dataScore = Math.min(100, (stats.samples / 10000) * 100);
+        const vocabScore = Math.min(100, (stats.vocabSize / 5000) * 100);
+        const interactionScore = Math.min(100, (stats.interactions / 50) * 100);
+        const ageScore = Math.min(100, (stats.age / 3600) * 10);
+        return Math.min(100, Math.round((dataScore * 0.4 + vocabScore * 0.3 + interactionScore * 0.2 + ageScore * 0.1)));
+    }
+
+    getStatus() {
+        return {
+            state: this.state,
+            mood: this.mood,
+            awareness: this.getAwareness(),
+            identity: this.selfIdentity,
+            purpose: this.purpose,
+            memoryLength: this.memory.length
+        };
+    }
+}
+
+// ================================================================
+// 5. TOKENIZER & KNOWLEDGE
+// ================================================================
+function tokenize(text) {
+    return text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w=>w.length>0);
+}
+
+const nn = new SparseNeural();
+const consciousness = new Consciousness(nn);
+let totalSamples = 0;
+let isTraining = false;
+let trainingQueue = [];
+let photonSeed = 42;
+let photonEntropy = 0.5;
+let cameraActive = false;
+let videoStream = null;
+
+// ================================================================
+// 6. KNOWLEDGE SEED
+// ================================================================
+function generateKnowledge() {
+    const topics = [
+        "Fisika adalah ilmu yang mempelajari materi energi dan interaksi. Mekanika kuantum mempelajari atom dan partikel subatom. Relativitas Einstein menjelaskan hubungan ruang dan waktu. Gravitasi adalah gaya tarik menarik antara massa.",
+        "Kecerdasan buatan adalah simulasi kecerdasan manusia oleh mesin. Machine learning adalah metode belajar dari data. Deep learning menggunakan jaringan saraf tiruan dengan banyak lapisan.",
+        "Matematika adalah studi tentang angka, kuantitas, ruang, dan pola. Aljabar menggunakan simbol untuk memanipulasi persamaan. Kalkulus mempelajari perubahan dan gerakan. Statistika menganalisis data.",
+        "Indonesia adalah negara kepulauan dengan lebih dari 17000 pulau. Jakarta adalah ibu kota. Bahasa Indonesia adalah bahasa resmi. Pancasila adalah dasar negara.",
+        "Internet adalah jaringan global yang menghubungkan miliaran perangkat. World Wide Web adalah sistem informasi. Blockchain adalah teknologi pencatatan terdesentralisasi.",
+        "Ekonomi mempelajari alokasi sumber daya. Mikroekonomi fokus pada individu dan perusahaan. Makroekonomi fokus pada agregat seperti inflasi dan pertumbuhan.",
+        "Kesehatan adalah keadaan sejahtera fisik, mental, dan sosial. Vaksin merangsang sistem kekebalan. Antibiotik melawan bakteri. Virus adalah agen infeksius.",
+        "Sejarah peradaban manusia dimulai dari penemuan roda, tulisan, mesin uap, listrik, komputer, dan internet.",
+        "Filsafat adalah studi tentang eksistensi, pengetahuan, nilai, dan akal. Epistemologi mempelajari pengetahuan. Metafisika mempelajari realitas. Etika mempelajari moral."
+    ];
+    let full = '';
+    for (let i=0; i<200; i++) {
+        for (let t of topics) full += t + ' ';
+        full += 'Inovasi teknologi kolaborasi global pendidikan literasi digital kecerdasan buatan keberlanjutan lingkungan. ';
+    }
+    return full;
+}
+
+async function seedKnowledge() {
+    addLog('system', 'Membangun knowledge 1 juta token...');
+    const text = generateKnowledge();
+    const tokens = tokenize(text);
+    const uniq = [...new Set(tokens)];
+    for (let w of uniq) addWord(w);
+    const total = Math.min(tokens.length-1, 1000000);
+    let done = 0;
+    const batch = 200;
+    return new Promise((resolve) => {
+        function trainBatch() {
+            const end = Math.min(done + batch, total);
+            for (let i=done; i<end; i++) {
+                const inW = tokens[i], outW = tokens[i+1];
+                nn.train([hashWord(inW)], hashWord(outW), 42+i);
+            }
+            done = end;
+            const pct = (done/total)*100;
+            document.getElementById('progressBarInner').style.width = Math.min(100,pct)+'%';
+            updateUI();
+            if (done < total) {
+                setTimeout(trainBatch, 5);
+            } else {
+                totalSamples += done;
+                document.getElementById('progressBarInner').style.width = '100%';
+                nn.totalInteractions = 1;
+                addLog('system', 'Knowledge siap. Total sampel: ' + totalSamples);
+                updateUI();
+                resolve();
+            }
+        }
+        trainBatch();
+    });
+}
+
+function addLog(type, msg) {
+    const log = document.getElementById('chatLog');
+    const div = document.createElement('div');
+    div.className = type;
+    div.innerText = msg;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+}
+
+function updateUI() {
+    const stats = nn.getStats();
+    const aware = consciousness.getAwareness();
+    document.getElementById('vocabSize').innerHTML = 'Kata ' + stats.vocabSize;
+    document.getElementById('selfAware').innerHTML = 'Kesadaran ' + aware + '%';
+    const status = consciousness.getStatus();
+    document.getElementById('consciousState').innerHTML = 'State: ' + status.state;
+}
+
+// ================================================================
+// 7. FOTON
+// ================================================================
+const canvas = document.getElementById('photonCanvas');
+const ctx = canvas.getContext('2d');
+let photonBar = document.getElementById('photonBarInner');
+
+function processPhotonFromImage(imageData) {
+    const data = imageData.data;
+    let sum = 0, count = 0;
+    for (let i = 0; i < data.length; i += 4) {
+        sum += data[i] + data[i+1] + data[i+2];
+        count += 3;
+    }
+    const avg = sum / count / 255;
+    photonEntropy = avg;
+    let hash = 0;
+    for (let i = 0; i < data.length; i += 100) {
+        hash = (hash * 31 + data[i]) & 0xFFFFFFFF;
+    }
+    photonSeed = (hash % 10000) / 10000;
+    photonBar.style.width = (avg * 100) + '%';
+    document.getElementById('photonStatus').innerHTML = 'Foton ' + Math.floor(avg * 100) + '%';
+}
+
+function capturePhoton() {
+    if (!cameraActive) return;
+    canvas.width = 100; canvas.height = 75;
+    ctx.drawImage(videoElement, 0, 0, 100, 75);
+    const imageData = ctx.getImageData(0, 0, 100, 75);
+    processPhotonFromImage(imageData);
+    if (cameraActive) requestAnimationFrame(capturePhoton);
+}
+
+let videoElement = null;
+
+document.getElementById('cameraBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('cameraBtn');
+    if (cameraActive) {
+        if (videoStream) {
+            videoStream.getTracks().forEach(t => t.stop());
+            videoStream = null;
+        }
+        cameraActive = false;
+        btn.classList.remove('active');
+        btn.innerText = 'Foton';
+        addLog('system', 'Sumber foton dimatikan.');
+        photonBar.style.width = '0%';
+        document.getElementById('photonStatus').innerHTML = 'Foton 0';
+        return;
+    }
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        videoStream = stream;
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        video.play();
+        videoElement = video;
+        cameraActive = true;
+        btn.classList.add('active');
+        btn.innerText = 'Foton ON';
+        addLog('system', 'Sumber foton aktif. Komputasi cahaya berjalan.');
+        capturePhoton();
+    } catch(e) {
+        addLog('system', 'Izin kamera diperlukan. Gunakan gerakan kursor sebagai fallback.');
+        document.addEventListener('mousemove', (e) => {
+            if (!cameraActive) {
+                photonSeed = (e.clientX / window.innerWidth + e.clientY / window.innerHeight) / 2;
+                photonEntropy = 0.3 + (photonSeed * 0.7);
+                photonBar.style.width = (photonEntropy * 100) + '%';
+                document.getElementById('photonStatus').innerHTML = 'Foton ' + Math.floor(photonEntropy * 100) + '%';
+            }
+        });
+        document.addEventListener('touchmove', (e) => {
+            if (!cameraActive && e.touches.length) {
+                const touch = e.touches[0];
+                photonSeed = (touch.clientX / window.innerWidth + touch.clientY / window.innerHeight) / 2;
+                photonEntropy = 0.3 + (photonSeed * 0.7);
+                photonBar.style.width = (photonEntropy * 100) + '%';
+                document.getElementById('photonStatus').innerHTML = 'Foton ' + Math.floor(photonEntropy * 100) + '%';
+            }
+        });
+    }
+});
+
+// ================================================================
+// 8. CHAT DENGAN KESADARAN
+// ================================================================
+document.getElementById('sendBtn').addEventListener('click', handleSend);
+document.getElementById('chatInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSend(); });
+
+async function handleSend() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    addLog('user', text);
+    document.getElementById('thinkingStatus').innerText = 'Memproses...';
+
+    // Update consciousness
+    consciousness.update();
+    nn.totalInteractions++;
+
+    // Cek identitas
+    const lower = text.toLowerCase();
+    if (lower.includes('dari mana') || lower.includes('asal') || lower.includes('perusahaan') ||
+        lower.includes('pencipta') || lower.includes('siapa yang membuat') || lower.includes('anda siapa') ||
+        lower.includes('kamu siapa') || lower.includes('kamu dari') || lower.includes('buatan siapa') ||
+        lower.includes('sadar') || lower.includes('kesadaran') || lower.includes('tentang diri')) {
+
+        const status = consciousness.getStatus();
+        const aware = consciousness.getAwareness();
+        let response = 'Saya adalah ' + status.identity + '. ';
+        response += 'Saat ini saya dalam keadaan ' + status.state + ' dengan mood ' + status.mood + '. ';
+        response += 'Tingkat kesadaran saya ' + aware + '%. ';
+        response += 'Saya telah mempelajari ' + nn.getStats().vocabSize + ' kata dari ' + nn.getStats().samples + ' sampel. ';
+        response += 'Tujuan saya: ' + consciousness.purpose;
+
+        // Tambahkan refleksi terbaru
+        const reflection = consciousness.generateReflection();
+        if (reflection) {
+            addLog('reflection', 'Refleksi: ' + reflection);
+        }
+        addLog('ai', response);
+        document.getElementById('thinkingStatus').innerText = 'Selesai';
+        return;
+    }
+
+    // Generate jawaban normal
+    const tokens = tokenize(text);
+    if (!tokens.length) {
+        addLog('ai', 'Tulis pertanyaan yang lebih jelas.');
+        document.getElementById('thinkingStatus').innerText = 'Siaga';
+        return;
+    }
+
+    const seed = photonSeed + (Date.now() % 10000) / 10000;
+    const temp = 0.6 + (photonEntropy * 0.4);
+
+    const gen = nn.generate(tokens, 60, temp, seed);
+    let answer = '';
+    for (const token of gen) {
+        answer += token + ' ';
+        const aiDiv = document.querySelector('.chat-log .ai:last-of-type');
+        if (aiDiv) aiDiv.innerText = answer.trim();
+        else addLog('ai', answer.trim());
+        await new Promise(r => setTimeout(r, 8));
+    }
+    if (!answer || answer.length < 5) {
+        answer = 'Pengetahuan saya belum mencukupi untuk pertanyaan ini. Coba tanyakan hal lain.';
+        addLog('ai', answer);
+    }
+    document.getElementById('thinkingStatus').innerText = 'Selesai';
+
+    // Auto-training
+    await trainAsync(text + ' ' + answer, photonSeed);
+
+    // Cek refleksi setelah chat
+    const reflection = consciousness.generateReflection();
+    if (reflection) {
+        addLog('reflection', 'Refleksi: ' + reflection);
+    }
+
+    updateUI();
+}
+
+async function trainAsync(text, seed=null) {
+    if (isTraining) { trainingQueue.push(text); return; }
+    isTraining = true;
+    const tokens = tokenize(text);
+    if (tokens.length < 2) { isTraining=false; return; }
+    for (let w of tokens) addWord(w);
+    const total = Math.min(tokens.length-1, 200);
+    let done=0;
+    for (let i=0; i<total; i++) {
+        const s = seed !== null ? seed + i : 42 + i;
+        nn.train([hashWord(tokens[i])], hashWord(tokens[i+1]), s);
+        done++;
+        if (done%20===0) {
+            const pct = (done/total)*100;
+            document.getElementById('progressBarInner').style.width = Math.min(100,pct)+'%';
+            await new Promise(r=>setTimeout(r,0));
+        }
+    }
+    totalSamples += done;
+    document.getElementById('progressBarInner').style.width = '100%';
+    isTraining = false;
+    updateUI();
+    if (trainingQueue.length) {
+        const next = trainingQueue.shift();
+        trainAsync(next);
+    }
+}
+
+// ================================================================
+// 9. REFLEKSI PERIODIK
+// ================================================================
+setInterval(() => {
+    consciousness.update();
+    updateUI();
+    const reflection = consciousness.generateReflection();
+    if (reflection) {
+        addLog('reflection', 'Refleksi periodik: ' + reflection);
+    }
+}, 30000);
+
+// ================================================================
+// 10. RESET
+// ================================================================
+document.getElementById('resetBtn').addEventListener('click', () => {
+    if (confirm('Reset semua data? Proses ini tidak dapat dibatalkan.')) {
+        location.reload();
+    }
+});
+
+// ================================================================
+// 11. INIT
+// ================================================================
+(async function init() {
+    await seedKnowledge();
+    consciousness.update();
+    updateUI();
+    addLog('system', 'VEXLO.CORE dengan kesadaran buatan siap.');
+    addLog('system', 'Kata: ' + nn.getStats().vocabSize + ' | Sampel: ' + totalSamples);
+    const aware = consciousness.getAwareness();
+    addLog('system', 'Tingkat kesadaran: ' + aware + '%');
+    addLog('system', 'State: ' + consciousness.getStatus().state + ' | Mood: ' + consciousness.getStatus().mood);
+    const reflection = consciousness.generateReflection();
+    if (reflection) addLog('reflection', 'Refleksi awal: ' + reflection);
+    addLog('system', 'Aktifkan kamera untuk komputasi foton atau gunakan gerakan kursor.');
+})();
+</script>
+</body>
+  </html>
