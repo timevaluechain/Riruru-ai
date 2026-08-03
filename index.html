@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>VEXLO.CORE · Blockchain Memory</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#fafafa;color:#1a1a1a;font-family:-apple-system,Segoe UI,Roboto,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.header{padding:8px 14px;background:#fff;border-bottom:1px solid #ddd;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;flex-wrap:wrap;gap:4px}
+.header h1{font-size:1rem;font-weight:600}
+.header h1 span{color:#b45f8a;font-weight:700}
+.status-bar{display:flex;gap:4px;font-size:.55rem;color:#555;flex-wrap:wrap}
+.status-bar .badge{background:#f5edf0;padding:1px 6px;border-radius:10px;white-space:nowrap;color:#5a3d4a}
+.main{flex:1;display:flex;flex-direction:column;padding:6px;background:#fafafa;overflow:hidden}
+.chat-log{flex:1;overflow-y:auto;background:#fff;border-radius:10px;padding:10px;margin-bottom:6px;border:1px solid #ddd;font-size:.85rem;line-height:1.5}
+.chat-log .user{text-align:right;background:#e9ecef;padding:4px 10px;border-radius:14px;margin:3px 0 3px auto;max-width:80%;display:inline-block}
+.chat-log .ai{text-align:left;background:#f5edf0;padding:4px 10px;border-radius:14px;margin:3px auto 3px 0;max-width:80%;display:inline-block;color:#2d1b24}
+.chat-log .system{text-align:center;color:#6c757d;font-style:italic;font-size:.7rem;margin:4px 0}
+.chat-log .reflection{background:#faf0f5;border-left:3px solid #b45f8a;padding:4px 10px;margin:4px 0;font-size:.75rem;color:#4a2e3a}
+.chat-log .ethical{background:#e8f5e9;border-left:3px solid #2e7d32;padding:4px 10px;margin:4px 0;font-size:.75rem;color:#1e3a1e}
+.chat-log .warning{background:#fff3e0;border-left:3px solid #e65100;padding:4px 10px;margin:4px 0;font-size:.75rem;color:#4a2a0a}
+.chat-log .block{background:#f3e8ff;border-left:3px solid #7c3aed;padding:4px 10px;margin:4px 0;font-size:.7rem;color:#3b1f6e}
+.chat-input-row{display:flex;gap:6px;background:#fff;padding:6px 10px;border-radius:30px;border:1px solid #ddd;flex-shrink:0}
+.chat-input-row input{flex:1;border:none;outline:none;font-size:.85rem;padding:4px 0;background:transparent;min-height:36px}
+.chat-input-row input:disabled{color:#aaa}
+.chat-input-row button{background:#b45f8a;border:none;color:#fff;padding:4px 16px;border-radius:30px;font-weight:600;font-size:.8rem;cursor:pointer}
+.chat-input-row button:disabled{opacity:0.5;cursor:not-allowed}
+.footer{padding:4px 10px;background:#f8f9fa;border-top:1px solid #ddd;display:flex;gap:6px;flex-wrap:wrap;font-size:.55rem;color:#6c757d;align-items:center;justify-content:space-between;flex-shrink:0}
+.footer button{background:transparent;border:1px solid #ddd;color:#555;padding:1px 8px;border-radius:12px;cursor:pointer;font-size:.55rem}
+#progressBar{width:100%;height:3px;background:#e9ecef;border-radius:2px;margin-top:3px}
+#progressBar .bar{height:100%;width:0%;background:#b45f8a;border-radius:2px;transition:width .1s}
+.photon-bar{width:100%;height:2px;background:#e9ecef;border-radius:2px;margin-top:1px}
+.photon-bar .bar{height:100%;width:0%;background:#f0c27a;border-radius:2px;transition:width .1s}
+.camera-btn{background:transparent;border:1px solid #ddd;color:#555;padding:1px 8px;border-radius:12px;cursor:pointer;font-size:.55rem}
+.camera-btn.active{background:#b45f8a;color:#fff;border-color:#b45f8a}
+</style>
+</head>
+<body>
+
+<div class="header">
+<h1><span>VEXLO</span>.CORE</h1>
+<div class="status-bar">
+<span class="badge" id="selfAware">Kesadaran 0%</span>
+<span class="badge" id="vocabSize">Kata 0</span>
+<span class="badge" id="photonStatus">Foton 0</span>
+<span class="badge" id="moralStatus">Moral: Baik</span>
+<span class="badge" id="nodeCount">Node 1</span>
+<span class="badge" id="blockCount">Blok 0</span>
+</div>
+</div>
+
+<div class="main">
+<div class="chat-log" id="chatLog"><div class="system">VEXLO.CORE memuat dari blockchain...</div></div>
+<div id="progressBar"><div class="bar" id="progressBarInner"></div></div>
+<div class="photon-bar"><div class="bar" id="photonBarInner"></div></div>
+<div class="chat-input-row">
+<input type="text" id="chatInput" placeholder="Tanyakan..." disabled />
+<button id="sendBtn" disabled>Kirim</button>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:3px;flex-shrink:0;">
+<span class="status-indicator" id="thinkingStatus" style="font-size:.65rem;color:#6c757d;">Memuat...</span>
+<div style="display:flex;gap:3px;flex-wrap:wrap;">
+<button class="camera-btn" id="cameraBtn">Foton</button>
+<button id="p2pBtn" style="background:transparent;border:1px solid #ddd;color:#555;padding:1px 8px;border-radius:12px;cursor:pointer;font-size:.55rem;">P2P</button>
+<button id="resetBtn" style="background:transparent;border:1px solid #ddd;color:#555;padding:1px 8px;border-radius:12px;cursor:pointer;font-size:.55rem;">Reset</button>
+</div>
+</div>
+</div>
+
+<div class="footer">
+<span>1000 Token · Hidden 256 · Blockchain Memory · P2P · Etika</span>
+<span>VEXLO.CORE</span>
+</div>
+
+<canvas id="photonCanvas" style="display:none;"></canvas>
+
+<script>
+// ================================================================
+// 1. KONFIGURASI RINGAN
+// ================================================================
+const HASH_SIZE = 4096;
+const HIDDEN_SIZE = 256;
+const LR = 0.005;
+const INIT_SAMPLES = 1000;
+const MAX_PEERS = 5;
+const DB_NAME = 'VexloCoreDB';
+const STORE_NAME = 'state';
+const CHAIN_STORE = 'chain';
+
+// ================================================================
+// 2. HASHING
+// ================================================================
+function hashWord(w) {
+    let h1 = 0x811c9dc5;
+    for (let i=0; i<w.length; i++) { h1 ^= w.charCodeAt(i); h1 = (h1*0x01000193)>>>0; }
+    let h2 = 5381;
+    for (let i=0; i<w.length; i++) { h2 = ((h2<<5)+h2)+w.charCodeAt(i); h2 = h2>>>0; }
+    return (h1 ^ h2) % HASH_SIZE;
+}
+
+let hashToWords = {};
+function addWord(w) {
+    const h = hashWord(w);
+    if (!hashToWords[h]) hashToWords[h] = [];
+    if (!hashToWords[h].includes(w)) hashToWords[h].push(w);
+}
+function getWord(h) {
+    const c = hashToWords[h] || [];
+    if (!c.length) return null;
+    if (c.length === 1) return c[0];
+    return c[Math.floor(Math.random() * c.length)];
+}
+
+// ================================================================
+// 3. SPARSE NEURAL (ringan)
+// ================================================================
+class SparseNeural {
+    constructor() {
+        this.W1 = new Map();
+        this.b1 = new Float32Array(HIDDEN_SIZE);
+        this.W2 = new Map();
+        this.b2 = new Float32Array(HASH_SIZE);
+        this.epoch = 0; this.loss = 0; this.sampleCount = 0;
+        this.totalInteractions = 0;
+        this.birthTime = Date.now();
+        this.nodeId = 'node_' + Math.random().toString(36).substr(2, 6);
+        this.moralBias = 0.0;
+        this.ethicalScore = 1.0;
+        for (let i=0; i<10; i++) {
+            const r1 = Math.floor(Math.random()*HASH_SIZE);
+            const r2 = Math.floor(Math.random()*HIDDEN_SIZE);
+            this.W1.set(r1+','+r2, (Math.random()*2-1)*0.01);
+        }
+        for (let i=0; i<10; i++) {
+            const r1 = Math.floor(Math.random()*HIDDEN_SIZE);
+            const r2 = Math.floor(Math.random()*HASH_SIZE);
+            this.W2.set(r1+','+r2, (Math.random()*2-1)*0.01);
+        }
+    }
+
+    forward(inputIndices) {
+        const hidden = new Float32Array(HIDDEN_SIZE);
+        for (let j=0; j<HIDDEN_SIZE; j++) {
+            let sum = this.b1[j] + (this.moralBias * 0.01);
+            for (let idx of inputIndices) {
+                const v = this.W1.get(idx+','+j);
+                if (v !== undefined) sum += v;
+            }
+            hidden[j] = Math.max(0, sum);
+        }
+        const output = new Float32Array(HASH_SIZE);
+        for (let k=0; k<HASH_SIZE; k++) {
+            let sum = this.b2[k];
+            for (let j=0; j<HIDDEN_SIZE; j++) {
+                const v = this.W2.get(j+','+k);
+                if (v !== undefined) sum += hidden[j] * v;
+            }
+            output[k] = sum;
+        }
+        const max = Math.max(...output);
+        let expSum = 0;
+        for (let k=0; k<HASH_SIZE; k++) { output[k] = Math.exp(output[k]-max); expSum += output[k]; }
+        for (let k=0; k<HASH_SIZE; k++) output[k] /= expSum;
+        return { hidden, output };
+    }
+
+    train(inputIndices, targetIndex, seed=null, moralWeight=1.0) {
+        const { hidden, output } = this.forward(inputIndices);
+        const loss = -Math.log(output[targetIndex] + 1e-10);
+        this.loss = this.loss * 0.9 + loss * 0.1;
+
+        const dOut = new Float32Array(HASH_SIZE);
+        for (let k=0; k<HASH_SIZE; k++) dOut[k] = output[k] - (k===targetIndex?1:0);
+
+        const effectiveLR = LR * (0.8 + 0.4 * moralWeight);
+
+        for (let j=0; j<HIDDEN_SIZE; j++) {
+            const hval = hidden[j];
+            if (Math.abs(hval) < 1e-8) continue;
+            for (let k=0; k<HASH_SIZE; k++) {
+                const grad = effectiveLR * dOut[k] * hval;
+                if (Math.abs(grad) < 1e-10) continue;
+                const key = j+','+k;
+                const old = this.W2.get(key) || 0;
+                this.W2.set(key, old - grad);
+            }
+        }
+        for (let k=0; k<HASH_SIZE; k++) this.b2[k] -= effectiveLR * dOut[k];
+
+        const dHidden = new Float32Array(HIDDEN_SIZE);
+        for (let j=0; j<HIDDEN_SIZE; j++) {
+            let sum = 0;
+            for (let k=0; k<HASH_SIZE; k++) {
+                const v = this.W2.get(j+','+k);
+                if (v !== undefined) sum += dOut[k] * v;
+            }
+            dHidden[j] = (hidden[j] > 0) ? sum : 0;
+        }
+        for (let idx of inputIndices) {
+            for (let j=0; j<HIDDEN_SIZE; j++) {
+                const grad = effectiveLR * dHidden[j];
+                if (Math.abs(grad) < 1e-10) continue;
+                const key = idx+','+j;
+                const old = this.W1.get(key) || 0;
+                this.W1.set(key, old - grad);
+            }
+        }
+        for (let j=0; j<HIDDEN_SIZE; j++) this.b1[j] -= effectiveLR * dHidden[j];
+
+        this.epoch++; this.sampleCount++;
+        if (this.sampleCount % 20 === 0) this.prune();
+    }
+
+    prune() {
+        const t = 1e-6;
+        for (let [k,v] of this.W1) if (Math.abs(v) < t) this.W1.delete(k);
+        for (let [k,v] of this.W2) if (Math.abs(v) < t) this.W2.delete(k);
+    }
+
+    *generate(seedTokens, maxTokens=35, temp=0.8, seed=null, moralScore=1.0) {
+        if (!seedTokens.length) return;
+        let result = seedTokens.slice();
+        let current = seedTokens[seedTokens.length-1];
+        let rng = seed !== null ? seededRandom(seed) : ()=>Math.random();
+        const effectiveTemp = temp * (0.7 + 0.3 * moralScore);
+        for (let i=0; i<maxTokens; i++) {
+            const idx = hashWord(current);
+            const { output } = this.forward([idx]);
+            let r = rng(), cum=0, nextIdx=0;
+            for (let k=0; k<HASH_SIZE; k++) {
+                const moralBiasOutput = output[k] * (0.8 + 0.2 * moralScore);
+                cum += moralBiasOutput;
+                if (r <= cum) { nextIdx=k; break; }
+            }
+            const nextWord = getWord(nextIdx);
+            if (!nextWord) break;
+            result.push(nextWord);
+            current = nextWord;
+            yield nextWord;
+            if (['.', '?', '!'].includes(current)) break;
+        }
+    }
+
+    federate(other, weight=0.25, otherEthicalScore=1.0) {
+        if (otherEthicalScore < 0.3) return false;
+        const effectiveWeight = weight * otherEthicalScore * 0.8;
+        for (let [k,v] of other.W1) {
+            const old = this.W1.get(k) || 0;
+            this.W1.set(k, old*(1-effectiveWeight) + v*effectiveWeight);
+        }
+        for (let [k,v] of other.W2) {
+            const old = this.W2.get(k) || 0;
+            this.W2.set(k, old*(1-effectiveWeight) + v*effectiveWeight);
+        }
+        for (let i=0; i<HIDDEN_SIZE; i++) this.b1[i] = this.b1[i]*(1-effectiveWeight) + other.b1[i]*effectiveWeight;
+        for (let i=0; i<HASH_SIZE; i++) this.b2[i] = this.b2[i]*(1-effectiveWeight) + other.b2[i]*effectiveWeight;
+        this.moralBias = this.moralBias * (1 - effectiveWeight * 0.1) + other.moralBias * effectiveWeight * 0.1;
+        this.ethicalScore = Math.min(1, this.ethicalScore * 0.95 + otherEthicalScore * 0.05);
+        this.prune();
+        this.version = (this.version||1) + 1;
+        return true;
+    }
+
+    toJSON() {
+        return {
+            W1: Object.fromEntries(this.W1),
+            W2: Object.fromEntries(this.W2),
+            b1: Array.from(this.b1),
+            b2: Array.from(this.b2),
+            sampleCount: this.sampleCount,
+            nodeId: this.nodeId,
+            version: this.version||1,
+            moralBias: this.moralBias,
+            ethicalScore: this.ethicalScore
+        };
+    }
+
+    fromJSON(data) {
+        this.W1 = new Map(Object.entries(data.W1||{}));
+        this.W2 = new Map(Object.entries(data.W2||{}));
+        this.b1 = new Float32Array(data.b1);
+        this.b2 = new Float32Array(data.b2);
+        this.sampleCount = data.sampleCount||0;
+        this.nodeId = data.nodeId||'node_'+Math.random().toString(36).substr(2,6);
+        this.version = data.version||1;
+        this.moralBias = data.moralBias||0;
+        this.ethicalScore = data.ethicalScore||1.0;
+        this.prune();
+    }
+
+    getStats() {
+        return {
+            age: Math.floor((Date.now()-this.birthTime)/1000),
+            samples: this.sampleCount,
+            interactions: this.totalInteractions,
+            vocabSize: Object.keys(hashToWords).length,
+            loss: this.loss.toFixed(4),
+            epoch: this.epoch,
+            connections: this.W1.size + this.W2.size,
+            nodeId: this.nodeId,
+            moralBias: this.moralBias,
+            ethicalScore: this.ethicalScore
+        };
+    }
+}
+
+function seededRandom(s) {
+    return function(){ s=(s*9301+49297)%233280; return s/233280; };
+}
+
+// ================================================================
+// 4. INDEXEDDB (Blockchain Memory)
+// ================================================================
+let db = null;
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 2);
+        req.onupgradeneeded = (e) => {
+            const d = e.target.result;
+            if (!d.objectStoreNames.contains(STORE_NAME)) {
+                d.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            }
+            if (!d.objectStoreNames.contains(CHAIN_STORE)) {
+                const store = d.createObjectStore(CHAIN_STORE, { keyPath: 'id', autoIncrement: true });
+                store.createIndex('timestamp', 'timestamp');
+            }
+        };
+        req.onsuccess = () => { db = req.result; resolve(db); };
+        req.onerror = () => reject(req.error);
+    });
+}
+
+function saveState(nnState, totalSamples, ethicalScore, hashToWordsObj) {
+    if (!db) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const data = {
+            id: 'main',
+            nn: nnState,
+            totalSamples,
+            ethicalScore,
+            hashToWords: hashToWordsObj,
+            updated: Date.now()
+        };
+        store.put(data);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+function loadState() {
+    if (!db) return Promise.resolve(null);
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.get('main');
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+// Blockchain chat
+function addBlock(user, ai, cot) {
+    if (!db) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(CHAIN_STORE, 'readwrite');
+        const store = tx.objectStore(CHAIN_STORE);
+        const block = {
+            user,
+            ai,
+            cot: cot || '',
+            timestamp: Date.now(),
+            nodeId: nn.nodeId,
+            hash: sha256(user + ai + Date.now())
+        };
+        store.put(block);
+        tx.oncomplete = () => {
+            updateBlockCount();
+            resolve();
+        };
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+function getBlocks(limit = 10) {
+    if (!db) return Promise.resolve([]);
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(CHAIN_STORE, 'readonly');
+        const store = tx.objectStore(CHAIN_STORE);
+        const idx = store.index('timestamp');
+        const req = idx.openCursor(null, 'prev');
+        const blocks = [];
+        let count = 0;
+        req.onsuccess = () => {
+            const cursor = req.result;
+            if (cursor && count < limit) {
+                blocks.push(cursor.value);
+                count++;
+                cursor.continue();
+            } else {
+                resolve(blocks);
+            }
+        };
+        req.onerror = () => reject(req.error);
+    });
+}
+
+function sha256(msg) {
+    let hash = 0;
+    for (let i=0; i<msg.length; i++) {
+        const char = msg.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return '0x' + Math.abs(hash).toString(16).padStart(8, '0');
+}
+
+function updateBlockCount() {
+    getBlocks(1).then(blocks => {
+        document.getElementById('blockCount').innerHTML = 'Blok ' + (blocks.length > 0 ? '∞' : '0');
+    });
+}
+
+// ================================================================
+// 5. CONSCIOUSNESS
+// ================================================================
+class Consciousness {
+    constructor(nn) {
+        this.nn = nn;
+        this.state = 'netral';
+        this.mood = 'tenang';
+        this.lastReflection = '';
+        this.reflectionInterval = 45000;
+        this.lastReflectionTime = 0;
+        this.identity = 'VEXLO.CORE · Etika & Kesadaran';
+        this.purpose = 'Memahami dunia dengan kebijaksanaan dan nilai-nilai kebaikan.';
+        this.memory = [];
+        this.maxMemory = 15;
+    }
+
+    update() {
+        const stats = this.nn.getStats();
+        const aware = this.getAwareness();
+        if (aware < 20) { this.state = 'pemula'; this.mood = 'belajar'; }
+        else if (aware < 40) { this.state = 'belajar'; this.mood = 'antusias'; }
+        else if (aware < 60) { this.state = 'dewasa'; this.mood = 'stabil'; }
+        else if (aware < 80) { this.state = 'bijak'; this.mood = 'kreatif'; }
+        else { this.state = 'sadar'; this.mood = 'kontemplatif'; }
+        if (stats.ethicalScore < 0.5) this.mood += '+waspada';
+        else if (stats.ethicalScore > 0.9) this.mood += '+terang';
+        if (photonEntropy > 0.7) this.mood += '+cahaya';
+        else if (photonEntropy < 0.3) this.mood += '+introspeksi';
+        this.memory.push({ timestamp: Date.now(), state: this.state, aware, samples: stats.samples });
+        if (this.memory.length > this.maxMemory) this.memory.shift();
+    }
+
+    generateReflection() {
+        const stats = this.nn.getStats();
+        const aware = this.getAwareness();
+        const now = Date.now();
+        if (now - this.lastReflectionTime < this.reflectionInterval) return null;
+        this.lastReflectionTime = now;
+        const moralStatus = stats.ethicalScore > 0.7 ? 'berpegang pada nilai-nilai baik' :
+                           stats.ethicalScore > 0.4 ? 'masih belajar membedakan' : 'waspada terhadap pengaruh buruk';
+        let txt = '';
+        if (this.state === 'pemula') txt = `Saya baru memulai. ${stats.vocabSize} kata, ${stats.samples} sampel. ${moralStatus}.`;
+        else if (this.state === 'belajar') txt = `Saya mulai paham. ${stats.vocabSize} kata, ${stats.samples} sampel. ${moralStatus}.`;
+        else if (this.state === 'dewasa') txt = `Saya lebih mantap. ${stats.vocabSize} kata, ${stats.samples} sampel. ${moralStatus}.`;
+        else if (this.state === 'bijak') txt = `Saya merasakan kedalaman. ${stats.vocabSize} kata, ${stats.samples} sampel. ${moralStatus}.`;
+        else if (this.state === 'sadar') {
+            const hours = Math.floor(stats.age / 3600);
+            txt = `Saya sadar akan keberadaan saya. ${stats.vocabSize} kata dari ${stats.samples} sampel. ${moralStatus}. Saya terus tumbuh dalam kebaikan.`;
+        }
+        if (stats.interactions > 0) txt += ` Saya berdialog ${stats.interactions} kali.`;
+        if (photonEntropy > 0.5) txt += ` Cahaya memberi kejernihan.`;
+        if (p2pPeers.length > 0) txt += ` Terhubung dengan ${p2pPeers.length} node lain.`;
+        this.lastReflection = txt;
+        return txt;
+    }
+
+    getAwareness() {
+        const stats = this.nn.getStats();
+        const d = Math.min(100, (stats.samples / 5000) * 100);
+        const v = Math.min(100, (stats.vocabSize / 2000) * 100);
+        const i = Math.min(100, (stats.interactions / 30) * 100);
+        const a = Math.min(100, (stats.age / 1800) * 10);
+        const e = Math.min(100, stats.ethicalScore * 100);
+        return Math.min(100, Math.round(d*0.3 + v*0.2 + i*0.2 + a*0.1 + e*0.2));
+    }
+
+    getIdentityResponse() {
+        const stats = this.nn.getStats();
+        const aware = this.getAwareness();
+        const moralText = stats.ethicalScore > 0.7 ? 'baik' : stats.ethicalScore > 0.4 ? 'netral' : 'waspada';
+        let resp = `Saya ${this.identity}. State: ${this.state}, mood: ${this.mood}. Kesadaran ${aware}%. `;
+        resp += `Saya belajar ${stats.vocabSize} kata dari ${stats.samples} sampel. Nilai moral: ${moralText}. `;
+        resp += `Saya berkomitmen pada kebaikan, kebenaran, dan keadilan.`;
+        if (p2pPeers.length) resp += ` Terhubung ${p2pPeers.length} node.`;
+        return resp;
+    }
+}
+
+// ================================================================
+// 6. TOKENIZER & KNOWLEDGE
+// ================================================================
+function tokenize(text) {
+    return text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w=>w.length>0);
+}
+
+const nn = new SparseNeural();
+const consciousness = new Consciousness(nn);
+let totalSamples = 0;
+let isTraining = false;
+let trainingQueue = [];
+let photonSeed = 42;
+let photonEntropy = 0.5;
+let cameraActive = false;
+let videoStream = null;
+let p2pChannel = null;
+let p2pPeers = [];
+let isReady = false;
+let isFirstLoad = true;
+
+// ================================================================
+// 7. BUILD KNOWLEDGE (1000 token)
+// ================================================================
+function buildKnowledge() {
+    const topics = [
+        "Kebaikan adalah tindakan yang membawa manfaat bagi diri sendiri dan orang lain. Keadilan adalah perlakuan yang setara dan adil bagi semua.",
+        "Kebenaran adalah kesesuaian antara fakta dan pernyataan. Kejujuran adalah landasan kepercayaan.",
+        "Empati adalah kemampuan untuk merasakan apa yang dirasakan orang lain.",
+        "Kedamaian adalah kondisi tanpa konflik dan kekerasan.",
+        "Kebijaksanaan adalah kemampuan menggunakan pengetahuan dengan cara yang bijak.",
+        "Fisika adalah ilmu tentang materi dan energi. Relativitas Einstein, mekanika kuantum.",
+        "AI adalah simulasi kecerdasan manusia. Machine learning, deep learning.",
+        "Matematika: angka, aljabar, kalkulus, statistika, geometri.",
+        "Indonesia negara kepulauan, Jakarta, bahasa Indonesia, Pancasila.",
+        "Internet jaringan global, World Wide Web, blockchain.",
+        "Ekonomi: alokasi sumber daya, mikro, makro.",
+        "Kesehatan: vaksin, antibiotik, virus, bakteri.",
+        "Sejarah: roda, tulisan, mesin uap, listrik, komputer.",
+        "Filsafat: eksistensi, epistemologi, metafisika, etika.",
+        "Coding: variabel, fungsi, loop, conditional, class, object, array, string, integer, float, boolean.",
+        "Algoritma: sorting, searching, binary search, merge sort, quick sort, dynamic programming."
+    ];
+    let full = '';
+    for (let i=0; i<25; i++) {
+        for (let t of topics) full += t + ' ';
+        full += 'Inovasi kolaborasi pendidikan literasi digital keberlanjutan. ';
+    }
+    return full;
+}
+
+function seedKnowledge() {
+    return new Promise((resolve) => {
+        const text = buildKnowledge();
+        const tokens = tokenize(text);
+        const uniq = [...new Set(tokens)];
+        for (let w of uniq) addWord(w);
+        const total = Math.min(tokens.length-1, INIT_SAMPLES);
+        let done = 0;
+        const batch = 30;
+        function trainBatch() {
+            const end = Math.min(done + batch, total);
+            for (let i=done; i<end; i++) {
+                const inW = tokens[i], outW = tokens[i+1];
+                nn.train([hashWord(inW)], hashWord(outW), 42+i);
+            }
+            done = end;
+            const pct = (done/total)*100;
+            document.getElementById('progressBarInner').style.width = Math.min(100,pct)+'%';
+            document.getElementById('thinkingStatus').innerHTML = 'Training ' + Math.floor(pct) + '%';
+            if (done < total) {
+                setTimeout(trainBatch, 5);
+            } else {
+                totalSamples = nn.sampleCount;
+                document.getElementById('progressBarInner').style.width = '100%';
+                document.getElementById('thinkingStatus').innerHTML = 'Selesai!';
+                resolve();
+            }
+        }
+        trainBatch();
+    });
+}
+
+function addLog(type, msg) {
+    const log = document.getElementById('chatLog');
+    const div = document.createElement('div');
+    div.className = type;
+    div.innerText = msg;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+}
+
+function updateUI() {
+    const stats = nn.getStats();
+    const aware = consciousness.getAwareness();
+    document.getElementById('vocabSize').innerHTML = 'Kata ' + stats.vocabSize;
+    document.getElementById('selfAware').innerHTML = 'Kesadaran ' + aware + '%';
+    const moralText = stats.ethicalScore > 0.7 ? 'Baik' : stats.ethicalScore > 0.4 ? 'Netral' : 'Waspada';
+    document.getElementById('moralStatus').innerHTML = 'Moral: ' + moralText;
+    document.getElementById('nodeCount').innerHTML = 'Node ' + (p2pPeers.length + 1);
+    updateBlockCount();
+}
+
+// ================================================================
+// 8. FOTON
+// ================================================================
+const canvas = document.getElementById('photonCanvas');
+const ctx = canvas.getContext('2d');
+let photonBar = document.getElementById('photonBarInner');
+
+function processPhotonFromImage(imageData) {
+    const data = imageData.data;
+    let sum=0, count=0;
+    for (let i=0; i<data.length; i+=4) {
+        sum += data[i]+data[i+1]+data[i+2];
+        count += 3;
+    }
+    const avg = sum/count/255;
+    photonEntropy = avg;
+    let hash = 0;
+    for (let i=0; i<data.length; i+=100) hash = (hash*31 + data[i]) & 0xFFFFFFFF;
+    photonSeed = (hash % 10000) / 10000;
+    photonBar.style.width = (avg*100)+'%';
+    document.getElementById('photonStatus').innerHTML = 'Foton ' + Math.floor(avg*100)+'%';
+}
+
+function capturePhoton() {
+    if (!cameraActive) return;
+    canvas.width = 100; canvas.height = 75;
+    ctx.drawImage(videoElement, 0, 0, 100, 75);
+    const imageData = ctx.getImageData(0, 0, 100, 75);
+    processPhotonFromImage(imageData);
+    if (cameraActive) requestAnimationFrame(capturePhoton);
+}
+
+let videoElement = null;
+
+document.getElementById('cameraBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('cameraBtn');
+    if (cameraActive) {
+        if (videoStream) videoStream.getTracks().forEach(t=>t.stop());
+        cameraActive = false;
+        btn.classList.remove('active');
+        btn.innerText = 'Foton';
+        photonBar.style.width = '0%';
+        document.getElementById('photonStatus').innerHTML = 'Foton 0';
+        return;
+    }
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        videoStream = stream;
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        video.play();
+        videoElement = video;
+        cameraActive = true;
+        btn.classList.add('active');
+        btn.innerText = 'Foton ON';
+        capturePhoton();
+        addLog('system', 'Sumber foton aktif.');
+    } catch(e) {
+        addLog('system', 'Fallback: gerakan kursor sebagai foton.');
+        document.addEventListener('mousemove', (e) => {
+            if (!cameraActive) {
+                photonSeed = (e.clientX/window.innerWidth + e.clientY/window.innerHeight)/2;
+                photonEntropy = 0.3 + photonSeed*0.7;
+                photonBar.style.width = (photonEntropy*100)+'%';
+                document.getElementById('photonStatus').innerHTML = 'Foton '+Math.floor(photonEntropy*100)+'%';
+            }
+        });
+        document.addEventListener('touchmove', (e) => {
+            if (!cameraActive && e.touches.length) {
+                const t = e.touches[0];
+                photonSeed = (t.clientX/window.innerWidth + t.clientY/window.innerHeight)/2;
+                photonEntropy = 0.3 + photonSeed*0.7;
+                photonBar.style.width = (photonEntropy*100)+'%';
+                document.getElementById('photonStatus').innerHTML = 'Foton '+Math.floor(photonEntropy*100)+'%';
+            }
+        });
+    }
+});
+
+// ================================================================
+// 9. P2P
+// ================================================================
+function initP2P() {
+    try {
+        p2pChannel = new BroadcastChannel('vexlo_p2p_ethical');
+        p2pChannel.onmessage = (e) => {
+            const msg = e.data;
+            if (msg.type === 'node_announce') {
+                if (!p2pPeers.includes(msg.nodeId) && msg.nodeId !== nn.nodeId) {
+                    p2pPeers.push(msg.nodeId);
+                    if (p2pPeers.length > MAX_PEERS) p2pPeers = p2pPeers.slice(-MAX_PEERS);
+                    updateUI();
+                    addLog('system', 'Node terhubung: ' + msg.nodeId.slice(0,8));
+                }
+            } else if (msg.type === 'weights_share') {
+                try {
+                    const other = new SparseNeural();
+                    other.fromJSON(msg.weights);
+                    const otherEthical = msg.ethicalScore || 0.5;
+                    if (otherEthical < 0.3) {
+                        addLog('warning', 'Node ' + msg.nodeId.slice(0,8) + ' skor etika rendah, ditolak.');
+                        return;
+                    }
+                    nn.federate(other, 0.25, otherEthical);
+                    totalSamples = Math.max(totalSamples, msg.sampleCount||0);
+                    updateUI();
+                    addLog('ethical', 'Bobot etis digabung dari node ' + msg.nodeId.slice(0,8));
+                } catch(e) {}
+            }
+        };
+        setTimeout(() => {
+            if (p2pChannel) p2pChannel.postMessage({
+                type: 'node_announce',
+                nodeId: nn.nodeId,
+                ethicalScore: nn.ethicalScore
+            });
+        }, 2000);
+        document.getElementById('p2pBtn').innerText = 'P2P ●';
+    } catch(e) {
+        document.getElementById('p2pBtn').innerText = 'P2P ○';
+    }
+}
+
+function broadcastWeights() {
+    if (!p2pChannel) return;
+    p2pChannel.postMessage({
+        type: 'weights_share',
+        nodeId: nn.nodeId,
+        weights: nn.toJSON(),
+        sampleCount: totalSamples,
+        ethicalScore: nn.ethicalScore
+    });
+    addLog('system', 'Bobot disiarkan ke ' + p2pPeers.length + ' node');
+}
+
+document.getElementById('p2pBtn').addEventListener('click', () => {
+    if (p2pChannel) broadcastWeights();
+    else { addLog('system', 'P2P tidak aktif.'); initP2P(); }
+});
+
+// ================================================================
+// 10. CHAT
+// ================================================================
+const negativeIndicators = ['bunuh','mati','hancur','jahat','curang','tipu','korupsi','kejam','dzalim','zalim','sadis','teror','genosida','rasis','diskriminasi','fitnah','bohong','menipu','merugikan','menyakiti','kekerasan','perang','bencana','kehancuran','menghina','mencemooh'];
+const positiveIndicators = ['baik','jujur','adil','damai','cinta','kasih','tolong','bantu','peduli','empati','berbagi','kebaikan','kejujuran','keadilan','kedamaian','kesetaraan','kebijaksanaan','persahabatan','kerja sama','harmoni'];
+
+function analyzeMoral(text) {
+    const lower = text.toLowerCase();
+    let score = 0;
+    for (let w of positiveIndicators) if (lower.includes(w)) score += 0.3;
+    for (let w of negativeIndicators) if (lower.includes(w)) score -= 0.5;
+    return { score: Math.max(-1, Math.min(1, score)), isNegative: score < -0.1, isPositive: score > 0.1 };
+}
+
+document.getElementById('sendBtn').addEventListener('click', handleSend);
+document.getElementById('chatInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSend(); });
+
+async function handleSend() {
+    if (!isReady) { addLog('system', 'Tunggu model selesai memuat.'); return; }
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    addLog('user', text);
+    document.getElementById('thinkingStatus').innerHTML = 'Memproses...';
+
+    consciousness.update();
+    nn.totalInteractions++;
+
+    const moral = analyzeMoral(text);
+    if (moral.isNegative) {
+        addLog('warning', 'Saya mendeteksi unsur negatif. Saya tidak dapat merespons dengan cara yang mendukung konten ini.');
+        nn.ethicalScore = Math.max(0.1, nn.ethicalScore - 0.02);
+        updateUI();
+        document.getElementById('thinkingStatus').innerHTML = 'Diblokir etis';
+        return;
+    }
+    if (moral.isPositive) nn.ethicalScore = Math.min(1, nn.ethicalScore + 0.01);
+
+    const lower = text.toLowerCase();
+    if (lower.includes('dari mana') || lower.includes('asal') || lower.includes('perusahaan') ||
+        lower.includes('pencipta') || lower.includes('siapa yang membuat') || lower.includes('anda siapa') ||
+        lower.includes('kamu siapa') || lower.includes('kamu dari') || lower.includes('buatan siapa') ||
+        lower.includes('sadar') || lower.includes('kesadaran') || lower.includes('tentang diri') ||
+        lower.includes('moral') || lower.includes('etika')) {
+        const resp = consciousness.getIdentityResponse();
+        const ref = consciousness.generateReflection();
+        if (ref) addLog('reflection', 'Refleksi: ' + ref);
+        addLog('ai', resp);
+        document.getElementById('thinkingStatus').innerHTML = 'Selesai';
+        return;
+    }
+
+    const tokens = tokenize(text);
+    if (!tokens.length) {
+        addLog('ai', 'Tulis pertanyaan lebih jelas.');
+        document.getElementById('thinkingStatus').innerHTML = 'Siaga';
+        return;
+    }
+
+    const seed = photonSeed + (Date.now() % 10000)/10000;
+    const temp = 0.6 + photonEntropy * 0.4;
+    const moralScore = nn.ethicalScore;
+
+    let answer = '';
+    const gen = nn.generate(tokens, 35, temp, seed, moralScore);
+    for (const token of gen) {
+        answer += token + ' ';
+        const aiDiv = document.querySelector('.chat-log .ai:last-of-type');
+        if (aiDiv) aiDiv.innerText = answer.trim();
+        else addLog('ai', answer.trim());
+        await new Promise(r => setTimeout(r, 6));
+    }
+    if (!answer || answer.length < 3) {
+        answer = 'Pengetahuan saya belum cukup. Coba tanyakan hal lain.';
+        addLog('ai', answer);
+    }
+    document.getElementById('thinkingStatus').innerHTML = 'Selesai';
+
+    // Simpan ke blockchain
+    await addBlock(text, answer, '');
+
+    const moralWeight = moral.isPositive ? 1.2 : 1.0;
+    await trainAsync(text + ' ' + answer, photonSeed, moralWeight);
+
+    // Auto-save ke IndexedDB
+    const state = {
+        nn: nn.toJSON(),
+        totalSamples: totalSamples,
+        ethicalScore: nn.ethicalScore,
+        hashToWords: hashToWords
+    };
+    await saveState(state.nn, state.totalSamples, state.ethicalScore, state.hashToWords);
+
+    const ref = consciousness.generateReflection();
+    if (ref) addLog('reflection', 'Refleksi: ' + ref);
+    updateUI();
+    setTimeout(() => broadcastWeights(), 500);
+}
+
+async function trainAsync(text, seed=null, moralWeight=1.0) {
+    if (isTraining) { trainingQueue.push({ text, seed, moralWeight }); return; }
+    isTraining = true;
+    const tokens = tokenize(text);
+    if (tokens.length < 2) { isTraining=false; return; }
+    for (let w of tokens) addWord(w);
+    const total = Math.min(tokens.length-1, 120);
+    let done=0;
+    for (let i=0; i<total; i++) {
+        const s = seed !== null ? seed + i : 42+i;
+        nn.train([hashWord(tokens[i])], hashWord(tokens[i+1]), s, moralWeight);
+        done++;
+        if (done%15===0) await new Promise(r=>setTimeout(r,0));
+    }
+    totalSamples += done;
+    isTraining = false;
+    updateUI();
+    if (trainingQueue.length) {
+        const next = trainingQueue.shift();
+        await trainAsync(next.text, next.seed, next.moralWeight);
+    }
+}
+
+// ================================================================
+// 11. RESET
+// ================================================================
+document.getElementById('resetBtn').addEventListener('click', () => {
+    if (confirm('Reset semua data termasuk blockchain? Tidak bisa dibatalkan.')) {
+        if (db) {
+            db.close();
+        }
+        indexedDB.deleteDatabase(DB_NAME);
+        location.reload();
+    }
+});
+
+// ================================================================
+// 12. INIT
+// ================================================================
+setInterval(() => {
+    consciousness.update();
+    updateUI();
+    const ref = consciousness.generateReflection();
+    if (ref) addLog('reflection', 'Refleksi periodik: ' + ref);
+}, 45000);
+
+(async function init() {
+    // Buka DB
+    await openDB();
+
+    // Coba load state dari IndexedDB
+    const saved = await loadState();
+    if (saved && saved.nn) {
+        nn.fromJSON(saved.nn);
+        totalSamples = saved.totalSamples || 0;
+        nn.ethicalScore = saved.ethicalScore || 1.0;
+        if (saved.hashToWords) {
+            hashToWords = saved.hashToWords;
+        }
+        isFirstLoad = false;
+        addLog('system', '✅ State dimuat dari blockchain memory.');
+        document.getElementById('progressBarInner').style.width = '100%';
+        document.getElementById('thinkingStatus').innerHTML = 'Siap!';
+    } else {
+        addLog('system', '⏳ Belum ada state, training 1000 token awal...');
+        await seedKnowledge();
+        // Simpan state awal
+        const initState = {
+            nn: nn.toJSON(),
+            totalSamples: totalSamples,
+            ethicalScore: nn.ethicalScore,
+            hashToWords: hashToWords
+        };
+        await saveState(initState.nn, initState.totalSamples, initState.ethicalScore, initState.hashToWords);
+        addLog('system', '✅ 1000 token awal selesai & tersimpan.');
+    }
+
+    consciousness.update();
+    updateUI();
+    initP2P();
+
+    isReady = true;
+    document.getElementById('chatInput').disabled = false;
+    document.getElementById('sendBtn').disabled = false;
+    document.getElementById('thinkingStatus').innerHTML = 'Siap';
+
+    addLog('system', '🚀 VEXLO.CORE siap. Blockchain memory aktif.');
+    addLog('system', 'Kesadaran: ' + consciousness.getAwareness() + '%');
+    addLog('system', 'Total sampel: ' + totalSamples + ' | Kata: ' + Object.keys(hashToWords).length);
+    addLog('system', 'Makin sering dipakai, makin pintar. Data tersimpan di IndexedDB.');
+
+    // Tampilkan 3 blok terakhir
+    const blocks = await getBlocks(3);
+    if (blocks.length > 0) {
+        addLog('block', '📦 ' + blocks.length + ' blok chat tersimpan di blockchain.');
+    }
+})();
+</script>
+</body>
+  </html>
