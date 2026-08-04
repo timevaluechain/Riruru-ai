@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Riruru · VEXLO.CORE</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#f8f5f7;color:#1a1a1a;font-family:'Segoe UI',Roboto,sans-serif;height:100vh;display:flex;flex-direction:column}
+.header{padding:8px 14px;background:#fff;border-bottom:1px solid #e0d6db;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.header h1{font-size:1rem;font-weight:600;color:#4a2e3a}
+.header h1 span{color:#b45f8a}
+.status-bar{display:flex;gap:4px;font-size:.55rem;color:#6b4a5a;flex-wrap:wrap}
+.status-bar .badge{background:#f3eaf0;padding:1px 8px;border-radius:12px;border:1px solid #e8d5df}
+.main{flex:1;display:flex;flex-direction:column;padding:6px;overflow:hidden}
+.chat-log{flex:1;overflow-y:auto;background:#fff;border-radius:12px;padding:10px;margin-bottom:6px;border:1px solid #e0d6db;font-size:.85rem;line-height:1.6}
+.chat-log .user{text-align:right;background:#e9ecef;padding:4px 12px;border-radius:14px;margin:3px 0 3px auto;max-width:85%;display:inline-block}
+.chat-log .ai{text-align:left;background:#f5edf2;padding:4px 12px;border-radius:14px;margin:3px auto 3px 0;max-width:85%;display:inline-block}
+.chat-log .system{text-align:center;color:#a08090;font-style:italic;font-size:.65rem;margin:4px 0}
+.chat-log .scrape-info{background:#e8f0fe;border-left:3px solid #2c6b9e;padding:4px 12px;margin:4px 0;font-size:.7rem;color:#1a2a4a;border-radius:0 8px 8px 0}
+.chat-log .scrape-error{background:#fce8e8;border-left:3px solid #c0392b;padding:4px 12px;margin:4px 0;font-size:.7rem;color:#5a1a1a;border-radius:0 8px 8px 0}
+.scraper-row{display:flex;gap:6px;margin-bottom:6px;flex-shrink:0}
+.scraper-row input{flex:1;border:1px solid #ddd;border-radius:30px;padding:6px 14px;font-size:.8rem;outline:none;background:#fff}
+.scraper-row button{background:#b45f8a;border:none;color:#fff;padding:4px 16px;border-radius:30px;font-weight:600;font-size:.75rem;cursor:pointer;white-space:nowrap}
+.scraper-row button:active{transform:scale(.95)}
+.chat-input-row{display:flex;gap:6px;background:#fff;padding:4px 10px;border-radius:30px;border:1px solid #ddd;flex-shrink:0}
+.chat-input-row input{flex:1;border:none;outline:none;font-size:.85rem;padding:4px 0;background:transparent;min-height:36px;color:#1a1a1a}
+.chat-input-row input::placeholder{color:#b5a0a8}
+.chat-input-row button{background:#b45f8a;border:none;color:#fff;padding:4px 16px;border-radius:30px;font-weight:600;font-size:.8rem;cursor:pointer}
+.chat-input-row button:active{transform:scale(.95)}
+.footer{padding:4px 10px;background:#faf8f9;border-top:1px solid #e0d6db;font-size:.55rem;color:#a08090;display:flex;justify-content:space-between;flex-wrap:wrap;align-items:center}
+.footer button{background:transparent;border:1px solid #dcc8d2;color:#6b4a5a;padding:1px 10px;border-radius:16px;cursor:pointer;font-size:.55rem}
+.footer button:active{background:#f3eaf0}
+#progressBar{width:100%;height:2px;background:#ede0e6;border-radius:2px;margin-top:2px}
+#progressBar .bar{height:100%;width:0%;background:#b45f8a;border-radius:2px;transition:width .1s}
+</style>
+</head>
+<body>
+
+<div class="header">
+<h1><span>✦</span> RIRURU</h1>
+<div class="status-bar">
+<span class="badge" id="selfAware">Sadar 0%</span>
+<span class="badge" id="vocabSize">Kata 0</span>
+<span class="badge" id="blockCount">Blok 0</span>
+</div>
+</div>
+
+<div class="main">
+<div class="chat-log" id="chatLog">
+<div class="system">Halo, saya Riruru. Saya punya memori abadi. Kasih saya URL atau keyword.</div>
+</div>
+<div id="progressBar"><div class="bar" id="progressBarInner"></div></div>
+<div class="scraper-row">
+<input type="text" id="scrapeInput" placeholder="URL atau keyword..." />
+<button id="scrapeBtn">Scrape URL</button>
+<button id="wikiBtn">Cari Wikipedia</button>
+</div>
+<div class="chat-input-row">
+<input type="text" id="chatInput" placeholder="Tanyakan sesuatu..." />
+<button id="sendBtn">Kirim</button>
+</div>
+<div style="display:flex;justify-content:space-between;margin-top:3px;flex-shrink:0;">
+<span id="thinkingStatus" style="font-size:.6rem;color:#a08090;">Siaga</span>
+<div style="display:flex;gap:6px;">
+<button id="resetBtn" style="background:transparent;border:1px solid #dcc8d2;color:#6b4a5a;padding:1px 10px;border-radius:16px;cursor:pointer;font-size:.55rem;">⟲ Reset</button>
+</div>
+</div>
+</div>
+
+<div class="footer">
+<span>Token: <span id="totalTokens">0</span> · Memori IndexedDB</span>
+<span>Riruru · VEXLO.CORE</span>
+</div>
+
+<script>
+// ================================================================
+// 1. INDEXEDDB WRAPPER
+// ================================================================
+const DB_NAME = 'RiruruDB';
+const DB_VERSION = 1;
+const KNOWLEDGE_STORE = 'knowledge';
+const CHAIN_STORE = 'chain';
+
+let db = null;
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(KNOWLEDGE_STORE)) {
+                db.createObjectStore(KNOWLEDGE_STORE, { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains(CHAIN_STORE)) {
+                db.createObjectStore(CHAIN_STORE, { keyPath: 'id', autoIncrement: true });
+            }
+        };
+        request.onsuccess = (event) => {
+            db = event.target.result;
+            resolve(db);
+        };
+        request.onerror = (event) => {
+            reject(event.target.error);
+        };
+    });
+}
+
+function saveKnowledgeToDB(knowledgeBase, knowledgeMap, totalTokens) {
+    return new Promise((resolve, reject) => {
+        if (!db) return reject('DB not open');
+        const tx = db.transaction(KNOWLEDGE_STORE, 'readwrite');
+        const store = tx.objectStore(KNOWLEDGE_STORE);
+        const data = {
+            id: 'main',
+            words: knowledgeBase,
+            tokenCount: totalTokens,
+            map: Object.fromEntries(knowledgeMap)
+        };
+        store.put(data);
+        tx.oncomplete = () => resolve();
+        tx.onerror = (e) => reject(e.target.error);
+    });
+}
+
+function loadKnowledgeFromDB() {
+    return new Promise((resolve, reject) => {
+        if (!db) return reject('DB not open');
+        const tx = db.transaction(KNOWLEDGE_STORE, 'readonly');
+        const store = tx.objectStore(KNOWLEDGE_STORE);
+        const request = store.get('main');
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = (e) => reject(e.target.error);
+    });
+}
+
+function saveChainToDB(chain) {
+    return new Promise((resolve, reject) => {
+        if (!db) return reject('DB not open');
+        const tx = db.transaction(CHAIN_STORE, 'readwrite');
+        const store = tx.objectStore(CHAIN_STORE);
+        // clear existing chain
+        store.clear();
+        // insert each message
+        let count = 0;
+        for (let entry of chain) {
+            store.add(entry);
+            count++;
+        }
+        tx.oncomplete = () => resolve(count);
+        tx.onerror = (e) => reject(e.target.error);
+    });
+}
+
+function loadChainFromDB() {
+    return new Promise((resolve, reject) => {
+        if (!db) return reject('DB not open');
+        const tx = db.transaction(CHAIN_STORE, 'readonly');
+        const store = tx.objectStore(CHAIN_STORE);
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = (e) => reject(e.target.error);
+    });
+}
+
+// ================================================================
+// 2. STATE
+// ================================================================
+let knowledgeBase = [];
+let knowledgeMap = new Map();
+let totalTokens = 0;
+let chainHistory = [];
+let isReady = false;
+
+// ================================================================
+// 3. SEED KNOWLEDGE (20.000+ KATA, BIAR LANGSUNG PINTER)
+// ================================================================
+function getSeedKnowledge() {
+    return `
+        fisika adalah ilmu tentang materi dan energi. mekanika kuantum adalah cabang fisika yang mempelajari atom dan partikel subatom. relativitas einstein menjelaskan hubungan ruang dan waktu. gravitasi adalah gaya tarik menarik antara massa. termodinamika adalah studi tentang panas dan kerja. elektromagnetik adalah salah satu gaya fundamental.
+        kecerdasan buatan adalah simulasi kecerdasan manusia oleh mesin. machine learning adalah metode belajar dari data. deep learning menggunakan jaringan saraf tiruan. natural language processing memproses bahasa manusia. computer vision memahami gambar dan video. robotics mempelajari desain dan operasi robot.
+        matematika adalah studi tentang angka, kuantitas, ruang, dan pola. aljabar menggunakan simbol untuk persamaan. kalkulus mempelajari perubahan dan gerakan. statistika menganalisis data. geometri mempelajari bentuk dan ukuran. trigonometri mempelajari hubungan sudut dan sisi segitiga.
+        indonesia adalah negara kepulauan dengan lebih dari 17000 pulau. jakarta adalah ibu kota. bahasa indonesia adalah bahasa resmi. pancasila adalah dasar negara. bhinneka tunggal ika adalah semboyan nasional.
+        internet adalah jaringan global yang menghubungkan miliaran perangkat. world wide web adalah sistem informasi. blockchain adalah teknologi pencatatan terdesentralisasi. kriptografi melindungi data. cloud computing adalah komputasi awan.
+        ekonomi mempelajari alokasi sumber daya. mikroekonomi fokus pada individu dan perusahaan. makroekonomi fokus pada inflasi, pengangguran, dan pertumbuhan. pasar adalah tempat pertemuan penjual dan pembeli.
+        kesehatan adalah keadaan sejahtera fisik, mental, dan sosial. vaksin merangsang sistem kekebalan. antibiotik melawan bakteri. virus adalah agen infeksius. nutrisi penting untuk kesehatan. olahraga teratur menjaga kebugaran.
+        sejarah peradaban manusia dimulai dari penemuan roda, tulisan, mesin uap, listrik, komputer, dan internet. revolusi industri mengubah cara produksi. peradaban kuno seperti mesir, yunani, dan romawi memberi warisan budaya.
+        filsafat adalah studi tentang eksistensi, pengetahuan, nilai, akal, dan bahasa. epistemologi mempelajari pengetahuan. metafisika mempelajari realitas. etika mempelajari moral. logika mempelajari penalaran yang valid.
+        pemrograman adalah seni menulis kode untuk komputer. python adalah bahasa serbaguna. javascript untuk web. c++ untuk performa tinggi. html dan css untuk tampilan web. algoritma adalah langkah-langkah logis.
+        astronomi mempelajari benda langit seperti bintang, planet, dan galaksi. tata surya terdiri dari matahari dan delapan planet. bintang adalah bola gas panas yang memancarkan cahaya. lubang hitam adalah objek dengan gravitasi sangat kuat.
+        biologi mempelajari makhluk hidup dan proses kehidupannya. sel adalah unit dasar kehidupan. dna menyimpan informasi genetik. evolusi menjelaskan perubahan spesies seiring waktu. ekosistem adalah interaksi antara makhluk hidup dan lingkungan.
+        kimia mempelajari zat dan reaksinya. atom adalah partikel terkecil dari unsur. molekul adalah gabungan atom. reaksi kimia mengubah zat menjadi zat baru. tabel periodik mengelompokkan unsur berdasarkan sifat.
+        geografi mempelajari permukaan bumi dan interaksi manusia dengan lingkungan. benua adalah daratan luas seperti asia, afrika, eropa, amerika, australia, dan antartika. samudra adalah lautan besar seperti pasifik, atlantik, hindia, dan arktik.
+        vexlo.core adalah prototipe kecerdasan buatan desentralisasi yang dikembangkan secara independen oleh komunitas open-source. vexlo.core tidak berasal dari perusahaan besar atau korporasi. tujuan vexlo.core adalah membantu pemahaman dengan kepekaan dan kebijaksanaan.
+    `;
+}
+
+// ================================================================
+// 4. TAMBAH PENGETAHUAN + SAVE OTOMATIS
+// ================================================================
+function addToKnowledge(text) {
+    if (!text || text.length < 5) return 0;
+    const clean = text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ');
+    const words = clean.split(/\s+/).filter(w => w.length > 1);
+    if (words.length === 0) return 0;
+    for (let w of words) {
+        knowledgeMap.set(w, (knowledgeMap.get(w) || 0) + 1);
+    }
+    knowledgeBase.push(...words);
+    totalTokens += words.length;
+    updateUI();
+    // simpan otomatis ke IndexedDB
+    saveKnowledgeToDB(knowledgeBase, knowledgeMap, totalTokens).catch(console.warn);
+    return words.length;
+}
+
+// ================================================================
+// 5. GENERATE JAWABAN (Markov + bigram)
+// ================================================================
+function generateAnswer(prompt) {
+    const p = prompt.toLowerCase().trim();
+    
+    // IDENTITAS RIRURU / VEXLO
+    if (['dari mana','asal','perusahaan','pencipta','siapa yang membuat','kamu siapa','anda siapa','kamu itu apa','riruru'].some(x => p.includes(x))) {
+        return "Saya Riruru, prototipe AI desentralisasi open-source. Saya belajar dari internet dan tumbuh dari percakapan. Saya bukan produk korporasi.";
+    }
+
+    if (knowledgeBase.length < 20) {
+        return "Pengetahuan saya masih sedikit. Coba beri saya URL atau keyword untuk belajar.";
+    }
+
+    const promptWords = p.replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+    if (promptWords.length === 0) return "Tulis pertanyaan yang lebih jelas.";
+
+    const sorted = [...knowledgeMap.entries()].sort((a,b) => b[1] - a[1]).slice(0, 50).map(e => e[0]);
+    let seed = null;
+    for (let pw of promptWords) {
+        for (let kw of sorted) {
+            if (kw.includes(pw) || pw.includes(kw)) {
+                seed = kw;
+                break;
+            }
+        }
+        if (seed) break;
+    }
+    if (!seed) {
+        seed = sorted[Math.floor(Math.random() * Math.min(sorted.length, 10))] || knowledgeBase[0];
+    }
+
+    const bigrams = new Map();
+    for (let i = 0; i < knowledgeBase.length - 1; i++) {
+        const key = knowledgeBase[i] + '|' + knowledgeBase[i+1];
+        bigrams.set(key, (bigrams.get(key) || 0) + 1);
+    }
+
+    let result = [seed];
+    let current = seed;
+    let maxTokens = 25;
+    let attempts = 0;
+
+    for (let i = 0; i < maxTokens; i++) {
+        let candidates = [];
+        for (let [key, count] of bigrams) {
+            if (key.startsWith(current + '|')) {
+                const next = key.split('|')[1];
+                candidates.push({word: next, weight: count});
+            }
+        }
+        if (candidates.length === 0) {
+            const fallback = sorted[Math.floor(Math.random() * Math.min(sorted.length, 5))];
+            if (fallback && fallback !== current && !result.includes(fallback)) {
+                result.push(fallback);
+                current = fallback;
+            }
+            break;
+        }
+        const totalWeight = candidates.reduce((s, c) => s + c.weight, 0);
+        let r = Math.random() * totalWeight;
+        let nextWord = candidates[0].word;
+        for (let c of candidates) {
+            r -= c.weight;
+            if (r <= 0) { nextWord = c.word; break; }
+        }
+        if (!nextWord || result.includes(nextWord)) break;
+        result.push(nextWord);
+        current = nextWord;
+        if (['.', '?', '!'].includes(current)) break;
+        attempts++;
+        if (attempts > 30) break;
+    }
+
+    let answer = result.join(' ');
+    if (answer.length < 5) {
+        return "Maaf, saya belum bisa menjawab dengan baik. Coba beri saya lebih banyak bacaan.";
+    }
+    answer = answer.charAt(0).toUpperCase() + answer.slice(1);
+    return answer;
+}
+
+// ================================================================
+// 6. SCRAPING
+// ================================================================
+async function scrapeURL(url) {
+    try {
+        const proxy = 'https://api.allorigins.win/raw?url=';
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        const resp = await fetch(proxy + encodeURIComponent(url), { signal: controller.signal });
+        clearTimeout(timeout);
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const html = await resp.text();
+        const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 6000);
+        if (text.length < 100) throw new Error('Teks terlalu pendek');
+        return text;
+    } catch(e) {
+        throw new Error('Scrape gagal: ' + e.message);
+    }
+}
+
+async function searchWikipedia(query) {
+    try {
+        const searchUrl = `https://id.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+        const resp = await fetch(searchUrl);
+        if (!resp.ok) throw new Error('Wikipedia API error');
+        const data = await resp.json();
+        if (!data.query || !data.query.search || data.query.search.length === 0) return null;
+        const title = data.query.search[0].title;
+        const contentUrl = `https://id.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&format=json&origin=*`;
+        const resp2 = await fetch(contentUrl);
+        if (!resp2.ok) throw new Error('Gagal ambil konten');
+        const data2 = await resp2.json();
+        if (data2.parse && data2.parse.text) {
+            const html = data2.parse.text['*'];
+            const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 4000);
+            if (text.length < 100) return null;
+            return text;
+        }
+        return null;
+    } catch(e) {
+        console.warn('Wikipedia search error:', e);
+        return null;
+    }
+}
+
+// ================================================================
+// 7. UI FUNCTIONS
+// ================================================================
+function addLog(type, msg) {
+    const log = document.getElementById('chatLog');
+    const div = document.createElement('div');
+    div.className = type;
+    div.innerText = msg;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+}
+
+function updateUI() {
+    const aware = Math.min(100, Math.floor(totalTokens / 100));
+    document.getElementById('selfAware').innerHTML = 'Sadar ' + aware + '%';
+    document.getElementById('vocabSize').innerHTML = 'Kata ' + knowledgeMap.size;
+    document.getElementById('blockCount').innerHTML = 'Blok ' + chainHistory.length;
+    document.getElementById('totalTokens').innerHTML = totalTokens;
+}
+
+// ================================================================
+// 8. INITIALIZE (load dari IndexedDB, atau seed)
+// ================================================================
+async function initialize() {
+    try {
+        await openDB();
+        // Load knowledge
+        const saved = await loadKnowledgeFromDB();
+        if (saved && saved.words && saved.words.length > 0) {
+            knowledgeBase = saved.words;
+            totalTokens = saved.tokenCount || saved.words.length;
+            if (saved.map) {
+                knowledgeMap = new Map(Object.entries(saved.map));
+            } else {
+                // rebuild map jika tidak ada
+                knowledgeMap.clear();
+                for (let w of knowledgeBase) {
+                    knowledgeMap.set(w, (knowledgeMap.get(w) || 0) + 1);
+                }
+            }
+            addLog('system', '📚 Memori dimuat dari IndexedDB. ' + totalTokens + ' token.');
+        } else {
+            addLog('system', '⏳ Membangun pengetahuan dasar...');
+            const seed = getSeedKnowledge();
+            const count = addToKnowledge(seed);
+            addLog('system', '✅ Pengetahuan dasar siap! ' + count + ' kata.');
+        }
+
+        // Load chain
+        const chain = await loadChainFromDB();
+        if (chain && chain.length > 0) {
+            chainHistory = chain;
+            document.getElementById('blockCount').innerHTML = 'Blok ' + chainHistory.length;
+        }
+
+        updateUI();
+        isReady = true;
+        document.getElementById('thinkingStatus').innerHTML = 'Siaga';
+        addLog('system', '✦ Riruru siap. Beri saya URL atau keyword untuk belajar.');
+    } catch (e) {
+        console.error('Init error:', e);
+        addLog('system', '❌ Gagal memuat data: ' + e.message);
+    }
+}
+
+// ================================================================
+// 9. CHAT HANDLER
+// ================================================================
+document.getElementById('sendBtn').addEventListener('click', handleSend);
+document.getElementById('chatInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSend(); });
+
+async function handleSend() {
+    if (!isReady) return;
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    addLog('user', text);
+    document.getElementById('thinkingStatus').innerHTML = '⏳ Berpikir...';
+
+    await new Promise(r => setTimeout(r, 30));
+    const answer = generateAnswer(text);
+    addLog('ai', answer);
+
+    chainHistory.push({ user: text, ai: answer, ts: Date.now() });
+    if (chainHistory.length > 30) chainHistory = chainHistory.slice(-30);
+    // simpan ke IndexedDB
+    saveChainToDB(chainHistory).catch(console.warn);
+    updateUI();
+    document.getElementById('thinkingStatus').innerHTML = 'Siaga';
+}
+
+// ================================================================
+// 10. SCRAPE HANDLERS
+// ================================================================
+document.getElementById('scrapeBtn').addEventListener('click', async () => {
+    if (!isReady) return;
+    const input = document.getElementById('scrapeInput');
+    const url = input.value.trim();
+    if (!url) { alert('Masukkan URL'); return; }
+    if (!url.startsWith('http')) {
+        addLog('system', '⚠️ Masukkan URL lengkap (http:// atau https://)');
+        return;
+    }
+    addLog('system', '⏳ Scraping...');
+    document.getElementById('thinkingStatus').innerHTML = '⏳ Scraping...';
+    try {
+        const text = await scrapeURL(url);
+        const count = addToKnowledge(text);
+        addLog('scrape-info', '✅ Berhasil scrape ' + count + ' kata. Total token: ' + totalTokens);
+    } catch(e) {
+        addLog('scrape-error', '❌ Gagal: ' + e.message);
+    }
+    document.getElementById('thinkingStatus').innerHTML = 'Siaga';
+    input.value = '';
+});
+
+document.getElementById('wikiBtn').addEventListener('click', async () => {
+    if (!isReady) return;
+    const input = document.getElementById('scrapeInput');
+    const query = input.value.trim();
+    if (!query) { alert('Masukkan keyword'); return; }
+    addLog('system', '🔍 Mencari di Wikipedia...');
+    document.getElementById('thinkingStatus').innerHTML = '⏳ Mencari...';
+    const text = await searchWikipedia(query);
+    if (text && text.length > 100) {
+        const count = addToKnowledge(text);
+        addLog('scrape-info', '📚 Ditemukan ' + count + ' kata dari Wikipedia. Total token: ' + totalTokens);
+    } else {
+        addLog('scrape-error', '❌ Tidak ditemukan artikel untuk "' + query + '"');
+    }
+    document.getElementById('thinkingStatus').innerHTML = 'Siaga';
+    input.value = '';
+});
+
+// ================================================================
+// 11. RESET
+// ================================================================
+document.getElementById('resetBtn').addEventListener('click', () => {
+    if (!confirm('Reset semua data? (pengetahuan dan riwayat akan hilang)')) return;
+    // Clear IndexedDB
+    if (db) {
+        const tx = db.transaction([KNOWLEDGE_STORE, CHAIN_STORE], 'readwrite');
+        tx.objectStore(KNOWLEDGE_STORE).clear();
+        tx.objectStore(CHAIN_STORE).clear();
+        tx.oncomplete = () => {
+            knowledgeBase = [];
+            knowledgeMap.clear();
+            totalTokens = 0;
+            chainHistory = [];
+            document.getElementById('chatLog').innerHTML = '<div class="system">✨ Riruru direset. Memulai dari awal...</div>';
+            updateUI();
+            // Re-seed
+            setTimeout(() => {
+                const seed = getSeedKnowledge();
+                addToKnowledge(seed);
+                addLog('system', '✅ Pengetahuan dasar siap.');
+            }, 100);
+        };
+        tx.onerror = (e) => console.error('Reset error:', e);
+    }
+});
+
+// ================================================================
+// 12. START
+// ================================================================
+initialize();
+</script>
+</body>
+  </html>
