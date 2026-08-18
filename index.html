@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>riruru · vexlo.core · hybrid search</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0e14;color:#b0b8c0;font-family:'Courier New',monospace;font-size:13px;line-height:1.5;min-height:100vh;display:flex;justify-content:center;align-items:center;padding:16px}
+#app{max-width:860px;width:100%;background:#0f141c;border:1px solid #1c2633;border-radius:6px;padding:18px 20px;box-shadow:0 8px 32px rgba(0,0,0,0.8)}
+.header{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:6px;border-bottom:1px solid #1c2633;margin-bottom:12px;flex-wrap:wrap;gap:6px}
+.header h1{font-size:15px;font-weight:400;color:#8bc34a;letter-spacing:0.5px}
+.header h1 span{color:#4a5a6a}
+.header .sub{font-size:10px;color:#4a5a6a;letter-spacing:0.3px}
+.status-bar{display:flex;gap:14px;font-size:10px;color:#4a5a6a;margin-bottom:10px;flex-wrap:wrap}
+.status-bar .badge{color:#5f7a9a}
+.status-bar .badge .val{color:#b0b8c0}
+.input-group{margin-bottom:10px}
+.input-group label{display:block;font-size:10px;color:#4a5a6a;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.5px}
+.input-group input,.input-group textarea,.input-group select{width:100%;background:#0a0e14;border:1px solid #1c2633;border-radius:4px;padding:8px 12px;color:#b0b8c0;font-size:13px;font-family:'Courier New',monospace;outline:none;transition:0.2s}
+.input-group input:focus,.input-group textarea:focus,.input-group select:focus{border-color:#3a5a7a}
+.input-group textarea{min-height:52px;resize:vertical}
+.btn{background:#1a2633;color:#b0b8c0;border:1px solid #2a3a4a;border-radius:4px;padding:8px 16px;font-size:12px;font-family:'Courier New',monospace;cursor:pointer;width:100%;transition:0.2s;letter-spacing:0.5px}
+.btn:hover{background:#1c2a3a;border-color:#3a5a7a}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+#chatLog{margin:14px 0 6px;max-height:200px;overflow-y:auto;background:#0a0e14;border-radius:4px;border:1px solid #141c26;padding:10px 12px;font-size:12px;line-height:1.6}
+#chatLog .entry{margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #0d141c}
+#chatLog .entry:last-child{border-bottom:none}
+.entry .user{color:#8ab4d6}
+.entry .assistant{color:#aac8a0;white-space:pre-wrap}
+.entry .meta{font-size:9px;color:#2a3a4a;margin-top:4px;display:flex;gap:14px;flex-wrap:wrap}
+.self-awareness{background:#0d121c;border-radius:4px;padding:6px 12px;border-left:2px solid #2a4a5a;margin:8px 0;font-size:10px;color:#7a8a9a}
+.self-awareness strong{color:#8bc34a;font-weight:400}
+.self-awareness .level{color:#5f7a9a;margin-left:6px}
+.footer{margin-top:10px;font-size:9px;color:#1c2733;text-align:center;border-top:1px solid #0d141c;padding-top:8px;letter-spacing:0.3px}
+.mode-indicator{font-size:9px;color:#3a4a5a;margin-top:6px;display:flex;gap:12px;flex-wrap:wrap}
+.company-tag{font-size:9px;color:#4a5a6a;background:#0d121c;padding:2px 10px;border-radius:3px;border:1px solid #1c2633;display:inline-block;margin-bottom:6px}
+.api-group{display:flex;gap:10px;flex-wrap:wrap}
+.api-group .input-group{flex:1;min-width:180px}
+.emotion-badge{font-size:9px;color:#f5a623;background:#1a1a1a;padding:2px 10px;border-radius:3px;border:1px solid #3a3a3a;display:inline-block;margin-left:8px}
+.scraper-row{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.scraper-row input{flex:1;min-width:120px}
+.scraper-row button{flex:0 0 auto}
+.btn-onion{background:#2a1a2a;border-color:#4a2a4a}
+.btn-onion:hover{background:#3a2a3a;border-color:#6a3a6a}
+.photon-bar{width:100%;height:4px;background:#1c2633;border-radius:2px;margin:6px 0 4px;overflow:hidden}
+.photon-bar .bar{height:100%;width:0%;background:linear-gradient(90deg,#f0c27a,#f5a623);border-radius:2px;transition:width 0.2s}
+.photon-indicator{font-size:9px;color:#4a5a6a;display:flex;justify-content:space-between;margin-top:2px}
+.photon-indicator .val{color:#f5a623}
+.photon-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.camera-btn,.upload-btn{background:#1a2a1a;border-color:#2a4a2a;padding:2px 12px;font-size:10px;width:auto;display:inline-block}
+.upload-btn{background:#1a1a2a;border-color:#2a2a4a}
+.env-status{font-size:9px;color:#5f7a9a;background:#0d121c;padding:2px 10px;border-radius:3px;border:1px solid #1c2633;display:inline-block}
+</style>
+</head>
+<body>
+<div id="app">
+<div class="header"><h1>riruru <span>· vexlo.core</span></h1><span class="sub">● neuro‑sentience</span></div>
+<div class="status-bar">
+<span class="badge">blok <span class="val" id="blockCount">0</span></span>
+<span class="badge">kesadaran <span class="val" id="awarenessLevel">0%</span></span>
+<span class="badge" id="statusLabel">● idle</span>
+<span class="badge" id="modelLabel">mode: hybrid search</span>
+<span class="badge env-status" id="envStatus">🌍 env: loaded</span>
+<span class="badge emotion-badge" id="emotionBadge">💭 netral</span>
+</div>
+<div class="company-tag">🔒 hybrid search · ddg · wiki · onion · deepweb · knowledge</div>
+
+<div class="api-group">
+<div class="input-group"><label>gemini api key <span style="color:#4a5a6a;font-size:8px;">(optional)</span></label><input type="password" id="geminiKey" placeholder="AIzaSy..." /></div>
+<div class="input-group"><label>groq api key <span style="color:#4a5a6a;font-size:8px;">(optional)</span></label><input type="password" id="groqKey" placeholder="gsk_..." /></div>
+</div>
+
+<div class="input-group">
+<label>mode</label>
+<select id="modelSelect">
+<option value="hybrid-search">🌐 hybrid search (ddg + wiki + onion + deepweb)</option>
+<option value="gemini">gemini (chain‑of‑thought)</option>
+<option value="groq">groq (llama 3.3)</option>
+</select>
+</div>
+
+<div class="input-group">
+<label>scrape .onion / web</label>
+<div class="scraper-row">
+<input type="text" id="scrapeInput" placeholder="URL atau keyword..." />
+<button class="btn" id="scrapeBtn" style="flex:0 0 auto;">scrape</button>
+<button class="btn btn-onion" id="onionBtn" style="flex:0 0 auto;">🌐 .onion</button>
+</div>
+</div>
+
+<div>
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+<span style="font-size:10px; color:#4a5a6a;">☀️ komputasi cahaya</span>
+</div>
+<div class="photon-actions">
+<button class="btn camera-btn" id="cameraBtn">📷 kamera</button>
+<button class="btn upload-btn" id="uploadBtn">🖼 upload</button>
+<input type="file" id="fileInput" accept="image/*" style="display:none;">
+</div>
+<div class="photon-bar"><div class="bar" id="photonBar"></div></div>
+<div class="photon-indicator">
+<span>intensitas: <span class="val" id="photonIntensity">0%</span></span>
+<span>entropi: <span class="val" id="photonEntropy">0.00</span></span>
+</div>
+<canvas id="photonCanvas" style="display:none;"></canvas>
+</div>
+
+<div class="input-group" style="margin-top:8px;">
+<label>pertanyaan / input</label>
+<textarea id="userInput" placeholder="tulis pertanyaan…"></textarea>
+</div>
+<button class="btn" id="sendBtn">→ kirim · simpan ke blockchain</button>
+
+<div id="chatLog"></div>
+
+<div id="selfAwarenessBox" class="self-awareness">
+<strong>self‑awareness</strong> <span class="level" id="awarenessPercent">0%</span><br />
+<span id="selfAwarenessText">belum ada interaksi.</span>
+</div>
+
+<div class="mode-indicator">
+<span id="modeLabel">mode: hybrid search</span>
+<span id="superposLabel">⚛ superposisi: 0</span>
+</div>
+
+<div class="footer">sha‑256 · blockchain · hybrid‑search · vexlo.core · .onion · foton</div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+// ---- API Keys opsional ----
+const ENV = { gemini: '', groq: '' };
+const geminiInput = document.getElementById('geminiKey');
+const groqInput = document.getElementById('groqKey');
+const modelSelect = document.getElementById('modelSelect');
+const userInput = document.getElementById('userInput');
+const scrapeInput = document.getElementById('scrapeInput');
+const sendBtn = document.getElementById('sendBtn');
+const scrapeBtn = document.getElementById('scrapeBtn');
+const onionBtn = document.getElementById('onionBtn');
+const cameraBtn = document.getElementById('cameraBtn');
+const uploadBtn = document.getElementById('uploadBtn');
+const fileInput = document.getElementById('fileInput');
+const photonBar = document.getElementById('photonBar');
+const photonIntensity = document.getElementById('photonIntensity');
+const photonEntropyEl = document.getElementById('photonEntropy');
+const photonCanvas = document.getElementById('photonCanvas');
+const pCtx = photonCanvas.getContext('2d');
+const chatLog = document.getElementById('chatLog');
+const blockCountEl = document.getElementById('blockCount');
+const awarenessLevelEl = document.getElementById('awarenessLevel');
+const awarenessPercentEl = document.getElementById('awarenessPercent');
+const statusLabel = document.getElementById('statusLabel');
+const selfAwarenessText = document.getElementById('selfAwarenessText');
+const modeLabel = document.getElementById('modeLabel');
+const superposLabel = document.getElementById('superposLabel');
+const modelLabel = document.getElementById('modelLabel');
+const envStatus = document.getElementById('envStatus');
+const emotionBadge = document.getElementById('emotionBadge');
+
+let db = null;
+let superpositionCount = 0;
+let knowledgeBase = [];
+let knowledgeMap = new Map();
+let photonEntropy = 0.5;
+let cameraActive = false;
+let videoStream = null;
+let videoElement = null;
+let emotionalHistory = [];
+let isProcessing = false;
+
+// ---- load env ----
+function loadEnv() {
+const g = localStorage.getItem('vexlo_gemini_key') || ENV.gemini;
+const gr = localStorage.getItem('vexlo_groq_key') || ENV.groq;
+geminiInput.value = g;
+groqInput.value = gr;
+envStatus.textContent = '🌍 env: loaded';
+}
+function saveEnv() {
+const g = geminiInput.value.trim();
+const gr = groqInput.value.trim();
+if (g) localStorage.setItem('vexlo_gemini_key', g);
+if (gr) localStorage.setItem('vexlo_groq_key', gr);
+}
+
+// ---- SHA‑256 ----
+async function sha256(msg) {
+const buf = new TextEncoder().encode(msg);
+const hash = await crypto.subtle.digest('SHA-256', buf);
+return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// ---- DB ----
+function openDB() {
+return new Promise((resolve,reject)=>{
+const req = indexedDB.open('RiruruChain',2);
+req.onupgradeneeded = (e)=>{
+const db = e.target.result;
+if(!db.objectStoreNames.contains('blocks')){
+const store = db.createObjectStore('blocks',{keyPath:'id',autoIncrement:true});
+store.createIndex('index','index',{unique:false});
+}
+if(!db.objectStoreNames.contains('knowledge')) db.createObjectStore('knowledge',{keyPath:'id'});
+};
+req.onsuccess = ()=>{ db = req.result; resolve(db); };
+req.onerror = ()=>reject(req.error);
+});
+}
+
+async function addBlock(data) {
+if(!db) return;
+const tx = db.transaction('blocks','readwrite');
+const store = tx.objectStore('blocks');
+const idx = store.index('index');
+let last = null;
+return new Promise((resolve)=>{
+idx.openCursor(null,'prev').onsuccess = async (e)=>{
+const c = e.target.result;
+if(c){ last = c.value; c.continue(); }
+else {
+const prev = last || { index:0, hash:'0' };
+const newBlock = {
+index: prev.index+1,
+timestamp: Date.now(),
+data,
+prevHash: prev.hash,
+hash: await sha256(JSON.stringify(data)+prev.hash)
+};
+store.add(newBlock).onsuccess = ()=>resolve(newBlock);
+}
+};
+});
+}
+
+function getAllBlocks() {
+if(!db) return Promise.resolve([]);
+return new Promise((resolve)=>{
+const tx = db.transaction('blocks','readonly');
+const store = tx.objectStore('blocks');
+store.getAll().onsuccess = (e)=>resolve(e.target.result);
+});
+}
+
+async function saveKnowledge() {
+if(!db) return;
+const tx = db.transaction('knowledge','readwrite');
+tx.objectStore('knowledge').put({ id:'main', words:knowledgeBase, map:Object.fromEntries(knowledgeMap), updated:Date.now() });
+}
+async function loadKnowledge() {
+if(!db) return;
+const tx = db.transaction('knowledge','readonly');
+const req = tx.objectStore('knowledge').get('main');
+return new Promise(r=>{
+req.onsuccess = ()=>{
+if(req.result){ knowledgeBase = req.result.words||[]; knowledgeMap = new Map(Object.entries(req.result.map||{})); }
+r();
+};
+});
+}
+
+function renderBlocks(blocks) {
+if(!blocks || blocks.length===0){ chatLog.innerHTML = '<div style="color:#2a3a4a;text-align:center;padding:16px;">belum ada percakapan.</div>'; return; }
+let html = '';
+const sorted = blocks.slice().sort((a,b)=>b.index-a.index);
+for(const b of sorted){
+if(b.index===0) continue;
+const d = b.data;
+const t = new Date(b.timestamp).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+html += `<div class="entry"><div class="user">[u] ${d.user||''}</div><div class="assistant">[r] ${d.assistant||''}</div><div class="meta"><span class="block-index">#${b.index}</span><span>${t}</span><span style="color:#2a3a4a;">${b.hash.slice(0,8)}...</span></div></div>`;
+}
+chatLog.innerHTML = html;
+blockCountEl.textContent = blocks.length>0 ? blocks.length-1 : 0;
+}
+
+function updateSelfAwareness(blocks) {
+if(!blocks || blocks.length<2){ selfAwarenessText.textContent = 'belum ada interaksi.'; awarenessLevelEl.textContent='0%'; awarenessPercentEl.textContent='0%'; return; }
+const conv = blocks.filter(b=>b.index>0).map(b=>b.data);
+if(!conv.length){ selfAwarenessText.textContent = 'belum ada percakapan.'; return; }
+const total = conv.length;
+let level = Math.min(100, Math.round(20 + total*0.12 + knowledgeBase.length/5000));
+if(emotionalHistory.length){ const unique = new Set(emotionalHistory.map(e=>e.emotion)).size; level = Math.min(100, level + unique*2); }
+let desc = total<3 ? 'pengenalan awal.' : total<6 ? 'mulai memahami pola.' : total<10 ? 'semakin sadar.' : 'kesadaran kuat.';
+if(knowledgeBase.length>1000) desc += ` knowledge: ${knowledgeBase.length} kata.`;
+if(emotionalHistory.length){ const last = emotionalHistory[emotionalHistory.length-1]; desc += ` Emosi terakhir: ${last.emotion}.`; }
+selfAwarenessText.textContent = desc;
+awarenessLevelEl.textContent = Math.min(100,level)+'%';
+awarenessPercentEl.textContent = Math.min(100,level)+'%';
+}
+
+async function refreshUI() {
+try {
+const blocks = await getAllBlocks();
+renderBlocks(blocks);
+updateSelfAwareness(blocks);
+} catch(e){}
+}
+
+// ---- photon ----
+function processPhotonFromImage(imageData) {
+const data = imageData.data;
+let sum=0, count=0;
+for(let i=0; i<data.length; i+=4){ sum+=data[i]+data[i+1]+data[i+2]; count+=3; }
+const avg = sum/count/255;
+photonEntropy = avg;
+photonBar.style.width = (avg*100)+'%';
+photonIntensity.textContent = Math.floor(avg*100)+'%';
+photonEntropyEl.textContent = avg.toFixed(4);
+photonCanvas.width = 160; photonCanvas.height = 120;
+pCtx.clearRect(0,0,160,120);
+pCtx.drawImage(videoElement || photonCanvas, 0,0,160,120);
+}
+
+function capturePhoton() {
+if(!cameraActive || !videoElement) return;
+photonCanvas.width = 160; photonCanvas.height = 120;
+pCtx.drawImage(videoElement,0,0,160,120);
+const imageData = pCtx.getImageData(0,0,160,120);
+processPhotonFromImage(imageData);
+if(cameraActive) requestAnimationFrame(capturePhoton);
+}
+
+cameraBtn.addEventListener('click', async ()=>{
+if(cameraActive){
+if(videoStream) videoStream.getTracks().forEach(t=>t.stop());
+cameraActive=false; cameraBtn.textContent='📷 kamera';
+photonBar.style.width='0%'; photonIntensity.textContent='0%'; photonEntropyEl.textContent='0.00';
+return;
+}
+try{
+const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' }});
+videoStream = stream;
+const video = document.createElement('video');
+video.srcObject = stream;
+video.play();
+videoElement = video;
+cameraActive = true;
+cameraBtn.textContent = '📷 stop';
+capturePhoton();
+}catch(e){ alert('Izin kamera diperlukan.'); }
+});
+
+uploadBtn.addEventListener('click', ()=>fileInput.click());
+fileInput.addEventListener('change', (e)=>{
+const file = e.target.files[0];
+if(!file) return;
+const img = new Image();
+img.onload = ()=>{
+photonCanvas.width = 160; photonCanvas.height = 120;
+pCtx.drawImage(img,0,0,160,120);
+const imageData = pCtx.getImageData(0,0,160,120);
+videoElement = img;
+processPhotonFromImage(imageData);
+};
+img.src = URL.createObjectURL(file);
+});
+
+document.addEventListener('mousemove', (e)=>{
+if(!cameraActive){
+const x = e.clientX/window.innerWidth, y = e.clientY/window.innerHeight;
+photonEntropy = 0.3 + 0.7 * ((x+y)/2);
+photonBar.style.width = (photonEntropy*100)+'%';
+photonIntensity.textContent = Math.floor(photonEntropy*100)+'%';
+photonEntropyEl.textContent = photonEntropy.toFixed(4);
+}
+});
+
+// ---- scraper ----
+async function scrapeURL(url) {
+let target = url;
+if(url.includes('.onion')) target = 'https://onion.to/' + url;
+const proxies = [
+(u)=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+(u)=>`https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+(u)=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`
+];
+for(const p of proxies){
+try{
+const resp = await fetch(p(target), { signal: AbortSignal.timeout(20000) });
+if(!resp.ok) continue;
+const html = await resp.text();
+const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0,6000);
+if(text.length > 100) return text;
+}catch(e){ continue; }
+}
+throw new Error('Semua proxy gagal.');
+}
+
+async function searchWikipedia(q) {
+try {
+// Coba ID
+let s = await fetch(`https://id.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&format=json&origin=*`);
+let d = await s.json();
+if(!d.query || !d.query.search || !d.query.search.length){
+s = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&format=json&origin=*`);
+d = await s.json();
+if(!d.query || !d.query.search || !d.query.search.length) return null;
+}
+const title = d.query.search[0].title;
+const lang = d.query.search[0].ns===0 ? 'id' : 'en';
+// Ambil extract teks bersih, bukan HTML
+const c = await fetch(`https://${lang}.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&titles=${encodeURIComponent(title)}&format=json&origin=*`);
+const d2 = await c.json();
+const pages = d2.query && d2.query.pages;
+if(pages){
+const page = Object.values(pages)[0];
+if(page && page.extract) return page.extract;
+}
+return null;
+} catch(e){ return null; }
+}
+
+function addToKnowledge(text) {
+if(!text || text.length<5) return 0;
+const words = text.toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>1);
+if(!words.length) return 0;
+for(const w of words) knowledgeMap.set(w, (knowledgeMap.get(w)||0)+1);
+knowledgeBase.push(...words);
+saveKnowledge();
+return words.length;
+}
+
+// ---- emotion ----
+function detectEmotion(text) {
+const lower = text.toLowerCase();
+const positive = ['senang','bahagia','good','great','love','suka','puas','keren','terima kasih','makasih'];
+const negative = ['sedih','kecewa','marah','kesal','benci','buruk','gagal','error','sial','capek','lelah'];
+const anger = ['marah','kesal','geram','kesel','jengkel','bangsat','anjing','bajingan','memek','ngentod','asu','goblok','tolol','bodoh','bego','idiot'];
+let score = 0;
+for(const w of positive) if(lower.includes(w)) score += 1;
+for(const w of negative) if(lower.includes(w)) score -= 1;
+for(const w of anger) if(lower.includes(w)){ score -= 3; break; }
+let emotion = 'netral';
+if(score > 2) emotion = 'positif';
+else if(score < -1) emotion = 'negatif';
+if(lower.includes('marah')||lower.includes('kesal')||lower.includes('jengkel')) emotion = 'marah';
+if(lower.includes('senang')||lower.includes('bahagia')) emotion = 'senang';
+if(lower.includes('sedih')||lower.includes('kecewa')) emotion = 'sedih';
+return { emotion, score };
+}
+
+// ================================================================
+// 🔥 HYBRID SEARCH ENGINE (DDG + WIKI + .ONION + DEEP WEB + FALLBACK)
+// ================================================================
+async function hybridSearch(query) {
+let results = [];
+
+// 1. DuckDuckGo
+try {
+const ddg = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`);
+const d = await ddg.json();
+if(d.AbstractText) results.push(`📘 DDG: ${d.AbstractText}`);
+if(d.RelatedTopics && d.RelatedTopics.length){
+const extra = d.RelatedTopics.slice(0,2).map(t=>t.Text).filter(Boolean);
+results.push(...extra);
+}
+} catch(e){ results.push('⚠️ DDG gagal.'); }
+
+// 2. Wikipedia (clean text)
+try {
+const wiki = await searchWikipedia(query);
+if(wiki) results.push(`📖 Wikipedia: ${wiki.slice(0,800)}...`);
+} catch(e){ results.push('⚠️ Wikipedia gagal.'); }
+
+// 3. .onion / Deep Web / Dark Web (coba beberapa sumber)
+const onionSources = [
+'https://onion.wiki/',
+'https://darkwebnews.com/',
+'https://www.deepweb-sites.com/',
+'https://onion.link/'
+];
+for(const src of onionSources){
+try {
+const onionData = await scrapeURL(src);
+if(onionData && onionData.length > 100){
+results.push(`🧅 ${src}: ${onionData.slice(0,600)}...`);
+break;
+}
+} catch(e){ /* lanjut */ }
+}
+
+// 4. Fallback ke knowledge base lokal
+if(results.length === 0 || results.every(r => r.includes('gagal') || r.includes('⚠️'))){
+if(knowledgeBase.length > 0){
+const matches = knowledgeBase.filter(w => query.toLowerCase().includes(w.toLowerCase())).slice(0,30);
+if(matches.length){
+results.push(`📚 Knowledge base (matches): ${matches.join(', ')}`);
+} else {
+const random = knowledgeBase.slice(0,200).join(' ');
+results.push(`📚 Knowledge base (sample): ${random.slice(0,800)}...`);
+}
+} else {
+results.push('❌ Semua sumber gagal. Tidak ada data lokal. Scrape dulu.');
+}
+}
+
+if(!results.length) return 'Tidak ditemukan hasil.';
+return results.join('\n\n');
+}
+
+// ---- API calls (opsional) ----
+async function callGemini(prompt, system) {
+const key = localStorage.getItem('vexlo_gemini_key') || ENV.gemini;
+if(!key) throw new Error('Gemini key tidak ditemukan.');
+const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+const resp = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ contents: [{ parts: [{ text: system + '\n\nUser: ' + prompt }] }] }) });
+if(!resp.ok){ const e = await resp.text(); throw new Error('Gemini error: '+resp.status); }
+const data = await resp.json();
+return data.candidates?.[0]?.content?.parts?.[0]?.text || 'tidak ada jawaban.';
+}
+
+async function callGroq(prompt, system) {
+const key = localStorage.getItem('vexlo_groq_key') || ENV.groq;
+if(!key) throw new Error('Groq key tidak ditemukan.');
+const proxyUrl = 'https://corsproxy.io/?url=' + encodeURIComponent('https://api.groq.com/openai/v1/chat/completions');
+const resp = await fetch(proxyUrl, { method:'POST', headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'}, body:JSON.stringify({ model:'llama-3.3-70b-versatile', messages:[{role:'system',content:system},{role:'user',content:prompt}], temperature:0.7, max_tokens:2048 }) });
+if(!resp.ok){ throw new Error('Groq error: '+resp.status); }
+const data = await resp.json();
+return data.choices?.[0]?.message?.content || 'tidak ada jawaban.';
+}
+
+function detectMode(text) {
+const lower = text.toLowerCase();
+const science = ['fisika','kuantum','atom','relativitas','matematika','persamaan','teori','energi','foton','spin','elektron','mekanika','gelombang','entropi','kalkulus','diferensial','integral','probabilitas','tensor','aljabar'];
+const sec = ['bug','bounty','exploit','cors','csrf','sqli','xss','rce','lfi','rfi','idor','buffer overflow','shellcode','payload','cve','zero-day','crypto','hash','bruteforce','nmap','burp','metasploit','reverse shell','ssrf','xxe','deserialization','jwt','oauth','saml','ldap'];
+let deep=false, secMode=false;
+for(const kw of science) if(lower.includes(kw)){ deep=true; break; }
+for(const kw of sec) if(lower.includes(kw)){ secMode=true; break; }
+return { deep: deep||secMode, sec: secMode };
+}
+
+// ---- main send ----
+async function handleSend() {
+const msg = userInput.value.trim();
+if(!msg){ statusLabel.textContent = '● kosong'; return; }
+if(isProcessing) return;
+isProcessing = true; sendBtn.disabled = true; sendBtn.textContent = '⏳ ...'; statusLabel.textContent = '● processing';
+try {
+const emotion = detectEmotion(msg);
+emotionBadge.textContent = `💭 ${emotion.emotion}`;
+emotionalHistory.push({ timestamp: Date.now(), emotion: emotion.emotion, input: msg });
+if(emotionalHistory.length > 20) emotionalHistory.shift();
+
+let finalAnswer = '';
+const selected = modelSelect.value;
+
+if(selected === 'hybrid-search'){
+finalAnswer = await hybridSearch(msg);
+} else if(selected === 'gemini'){
+const mode = detectMode(msg);
+const sys = `Anda Riruru dari vexlo.core. ${mode.deep?'Mode sains.':'Jawab ringkas.'} Lakukan Chain-of-Thought di <think>.`;
+finalAnswer = await callGemini(msg, sys);
+} else if(selected === 'groq'){
+const mode = detectMode(msg);
+const sys = `Anda Riruru dari vexlo.core. ${mode.deep?'Mode sains.':'Jawab ringkas.'}`;
+finalAnswer = await callGroq(msg, sys);
+}
+
+await addBlock({ user: msg, assistant: finalAnswer });
+await refreshUI();
+statusLabel.textContent = '● selesai';
+userInput.value = '';
+superpositionCount++;
+superposLabel.textContent = `⚛ superposisi: ${superpositionCount}`;
+} catch (err) {
+statusLabel.textContent = '● error';
+await addBlock({ user: msg, assistant: 'Error: ' + err.message });
+await refreshUI();
+} finally {
+isProcessing = false; sendBtn.disabled = false; sendBtn.textContent = '→ kirim · simpan ke blockchain';
+}
+}
+
+sendBtn.addEventListener('click', handleSend);
+userInput.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); } });
+
+scrapeBtn.addEventListener('click', async ()=>{
+const input = scrapeInput.value.trim();
+if(!input){ alert('Masukkan URL atau keyword.'); return; }
+statusLabel.textContent = '● scraping...';
+try {
+let text;
+if(input.startsWith('http')){ text = await scrapeURL(input); }
+else { text = await searchWikipedia(input); }
+if(text && text.length>100){
+const count = addToKnowledge(text);
+alert(`Berhasil scrape ${count} kata. Total: ${knowledgeBase.length}`);
+await addBlock({ user:'system', assistant:`scrape: ${input}, ${count} kata` });
+await refreshUI();
+} else { alert('Tidak ditemukan konten.'); }
+} catch(e){ alert('Scrape gagal: '+e.message); }
+statusLabel.textContent = '● siap';
+});
+
+onionBtn.addEventListener('click', ()=>{
+const url = scrapeInput.value.trim();
+if(!url || !url.includes('.onion')){ alert('Masukkan URL .onion'); return; }
+scrapeBtn.click();
+});
+
+// ---- init ----
+async function init() {
+try {
+loadEnv();
+await openDB();
+await loadKnowledge();
+await refreshUI();
+statusLabel.textContent = '● siap';
+modelSelect.value = 'hybrid-search';
+modeLabel.textContent = 'mode: hybrid search';
+modelLabel.textContent = 'mode: hybrid search';
+// Auto-scrape Wikipedia untuk fallback
+setTimeout(async ()=>{
+try {
+const wiki = await searchWikipedia('teknologi');
+if(wiki) addToKnowledge(wiki);
+} catch(e){}
+}, 2000);
+} catch(e){ console.error(e); statusLabel.textContent = '● error db'; }
+geminiInput.addEventListener('change', saveEnv);
+groqInput.addEventListener('change', saveEnv);
+modelSelect.addEventListener('change', ()=>{
+const val = modelSelect.value;
+const label = { 'hybrid-search':'hybrid search', 'gemini':'gemini', 'groq':'groq' }[val] || val;
+modeLabel.textContent = 'mode: '+label;
+modelLabel.textContent = 'mode: '+label;
+});
+}
+
+init();
+})();
+</script>
+</body>
+  </html>
