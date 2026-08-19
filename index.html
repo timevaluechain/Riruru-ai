@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vexlo · Tiny CoT · SmolLM2 135M</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0a0e14;
+            color: #b0b8c0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+        #app {
+            max-width: 860px;
+            width: 100%;
+            background: #0f141c;
+            border: 1px solid #1c2633;
+            border-radius: 6px;
+            padding: 18px 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #1c2633;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .header h1 {
+            font-size: 15px;
+            font-weight: 400;
+            color: #8bc34a;
+            letter-spacing: 0.5px;
+        }
+        .header h1 span {
+            color: #4a5a6a;
+        }
+        .header .sub {
+            font-size: 10px;
+            color: #4a5a6a;
+            letter-spacing: 0.3px;
+        }
+        .status-bar {
+            display: flex;
+            gap: 14px;
+            font-size: 10px;
+            color: #4a5a6a;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .status-bar .badge {
+            color: #5f7a9a;
+        }
+        .status-bar .badge .val {
+            color: #b0b8c0;
+        }
+        .input-group {
+            margin-bottom: 10px;
+        }
+        .input-group label {
+            display: block;
+            font-size: 10px;
+            color: #4a5a6a;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .input-group select,
+        .input-group textarea {
+            width: 100%;
+            background: #0a0e14;
+            border: 1px solid #1c2633;
+            border-radius: 4px;
+            padding: 8px 12px;
+            color: #b0b8c0;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            outline: none;
+            transition: 0.2s;
+        }
+        .input-group select:focus,
+        .input-group textarea:focus {
+            border-color: #3a5a7a;
+        }
+        .input-group textarea {
+            min-height: 52px;
+            resize: vertical;
+        }
+        .btn {
+            background: #1a2633;
+            color: #b0b8c0;
+            border: 1px solid #2a3a4a;
+            border-radius: 4px;
+            padding: 8px 16px;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.2s;
+            letter-spacing: 0.5px;
+        }
+        .btn:hover {
+            background: #1c2a3a;
+            border-color: #3a5a7a;
+        }
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        #chatLog {
+            margin: 14px 0 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: #0a0e14;
+            border-radius: 4px;
+            border: 1px solid #141c26;
+            padding: 10px 12px;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        #chatLog .entry {
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #0d141c;
+        }
+        #chatLog .entry:last-child {
+            border-bottom: none;
+        }
+        .entry .user {
+            color: #8ab4d6;
+        }
+        .entry .assistant {
+            color: #aac8a0;
+            white-space: pre-wrap;
+        }
+        .entry .think {
+            color: #5f7a9a;
+            font-size: 11px;
+            border-left: 2px solid #3a5a6a;
+            padding-left: 10px;
+            margin: 4px 0;
+            font-style: italic;
+            background: #0d121c;
+            border-radius: 4px;
+            padding: 6px 10px;
+        }
+        .entry .meta {
+            font-size: 9px;
+            color: #2a3a4a;
+            margin-top: 4px;
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+        .footer {
+            margin-top: 10px;
+            font-size: 9px;
+            color: #1c2733;
+            text-align: center;
+            border-top: 1px solid #0d141c;
+            padding-top: 8px;
+            letter-spacing: 0.3px;
+        }
+        .mode-indicator {
+            font-size: 9px;
+            color: #3a4a5a;
+            margin-top: 6px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .company-tag {
+            font-size: 9px;
+            color: #4a5a6a;
+            background: #0d121c;
+            padding: 2px 10px;
+            border-radius: 3px;
+            border: 1px solid #1c2633;
+            display: inline-block;
+            margin-bottom: 6px;
+        }
+        .env-status {
+            font-size: 9px;
+            color: #5f7a9a;
+            background: #0d121c;
+            padding: 2px 10px;
+            border-radius: 3px;
+            border: 1px solid #1c2633;
+            display: inline-block;
+        }
+        .emotion-badge {
+            font-size: 9px;
+            color: #f5a623;
+            background: #1a1a1a;
+            padding: 2px 10px;
+            border-radius: 3px;
+            border: 1px solid #3a3a3a;
+            display: inline-block;
+            margin-left: 8px;
+        }
+        .loader {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #2a3a4a;
+            border-top: 2px solid #8bc34a;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        .status-ready {
+            color: #8bc34a;
+        }
+        .status-loading {
+            color: #f5a623;
+        }
+        .status-error {
+            color: #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="header">
+            <h1>Vexlo <span>· Tiny CoT · SmolLM2 135M</span></h1>
+            <span class="sub">● neuro‑reasoning</span>
+        </div>
+        <div class="status-bar">
+            <span class="badge">blok <span class="val" id="blockCount">0</span></span>
+            <span class="badge">kesadaran <span class="val" id="awarenessLevel">0%</span></span>
+            <span class="badge" id="statusLabel">● idle</span>
+            <span class="badge" id="modelLabel">mode: smollm2 (loading...)</span>
+            <span class="badge env-status" id="envStatus">🌍 env: loaded</span>
+            <span class="badge emotion-badge" id="emotionBadge">💭 netral</span>
+        </div>
+        <div class="company-tag">🔒 SmolLM2-135M · Qwen2.5-0.5B · CoT · onion · scraper</div>
+
+        <div class="input-group">
+            <label>pilih model</label>
+            <select id="modelSelect">
+                <option value="smollm2">🧠 SmolLM2-135M (90 MB, paling ringan)</option>
+                <option value="qwen">🧠 Qwen2.5-0.5B (350 MB, lebih pintar)</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label>scrape .onion / web</label>
+            <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+                <input type="text" id="scrapeInput" placeholder="URL atau keyword..." style="flex:1; min-width:120px; background:#0a0e14; border:1px solid #1c2633; border-radius:4px; padding:8px 12px; color:#b0b8c0; font-size:13px; font-family:'Courier New', monospace; outline:none;" />
+                <button class="btn" id="scrapeBtn" style="flex:0 0 auto; width:auto; padding:8px 16px;">scrape</button>
+                <button class="btn btn-onion" id="onionBtn" style="flex:0 0 auto; width:auto; padding:8px 16px; background:#2a1a2a; border-color:#4a2a4a;">🌐 .onion</button>
+            </div>
+        </div>
+
+        <div class="input-group" style="margin-top:8px;">
+            <label>pertanyaan / input</label>
+            <textarea id="userInput" placeholder="tulis pertanyaan…"></textarea>
+        </div>
+        <button class="btn" id="sendBtn">→ kirim · simpan ke blockchain</button>
+
+        <div id="chatLog"></div>
+
+        <div class="mode-indicator">
+            <span id="modeLabel">mode: smollm2</span>
+            <span id="superposLabel">⚛ superposisi: 0</span>
+        </div>
+
+        <div class="footer">sha‑256 · blockchain · tiny cot · vexlo.core · onion · scraper</div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "@huggingface/transformers": "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0/dist/transformers.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import { pipeline, env } from "@huggingface/transformers";
+
+        // ---- DOM refs ----
+        const modelSelect = document.getElementById('modelSelect');
+        const userInput = document.getElementById('userInput');
+        const scrapeInput = document.getElementById('scrapeInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const scrapeBtn = document.getElementById('scrapeBtn');
+        const onionBtn = document.getElementById('onionBtn');
+        const chatLog = document.getElementById('chatLog');
+        const blockCountEl = document.getElementById('blockCount');
+        const awarenessLevelEl = document.getElementById('awarenessLevel');
+        const awarenessPercentEl = document.getElementById('awarenessPercent');
+        const statusLabel = document.getElementById('statusLabel');
+        const modelLabel = document.getElementById('modelLabel');
+        const modeLabel = document.getElementById('modeLabel');
+        const superposLabel = document.getElementById('superposLabel');
+        const emotionBadge = document.getElementById('emotionBadge');
+
+        // ---- state ----
+        let generator = null;
+        let isProcessing = false;
+        let superpositionCount = 0;
+        let chatHistory = [];
+        let knowledgeBase = [];
+        let db = null;
+        let loadingModel = false;
+        let currentModel = 'smollm2';
+
+        // ================================================================
+        // 🧠 SYSTEM PROMPT VEXLO (dengan Chain of Thought)
+        // ================================================================
+        const VEXLO_SYSTEM = `Anda adalah Riruru, asisten AI dari vexlo.core. 
+        Vexlo adalah startup teknologi yang bergerak di AI Customer Service 24/7, pembuatan website, dan riset quantum detector (AQD-01). 
+        Vexlo didirikan oleh founder berusia 17 tahun. Produk Vexlo: vexlo.my.id, docs.vexlo.my.id, app.vexlo.my.id.
+
+        TUGAS ANDA:
+        1. Pahami pertanyaan user dengan seksama.
+        2. Lakukan Chain of Thought — tuliskan proses berpikir Anda di dalam tag <think> ... </think>.
+        3. Setelah itu, berikan jawaban final yang jelas dan ringkas.
+
+        Jawab dalam bahasa Indonesia yang natural dan ramah.`;
+
+        // ================================================================
+        // 🔥 LOAD MODEL (SmolLM2 135M / Qwen2.5 0.5B)
+        // ================================================================
+        async function loadModel(modelName) {
+            if (generator && currentModel === modelName) return generator;
+            if (loadingModel) {
+                await new Promise(resolve => {
+                    const check = setInterval(() => {
+                        if (!loadingModel) { clearInterval(check);
+                            resolve(); }
+                    }, 300);
+                });
+                return generator;
+            }
+
+            loadingModel = true;
+            const modelId = modelName === 'smollm2' ?
+                'HuggingFaceTB/SmolLM2-135M-Instruct' :
+                'onnx-community/Qwen2.5-0.5B-Instruct';
+
+            const dtype = modelName === 'smollm2' ? 'q4f16' : 'q4';
+
+            statusLabel.innerHTML = `<span class="status-loading">● loading model...</span>`;
+            modelLabel.textContent = `mode: ${modelName} (loading)`;
+
+            try {
+                generator = await pipeline('text-generation', modelId, {
+                    dtype: dtype,
+                    device: 'cpu',
+                    progress_callback: (p) => {
+                        const percent = Math.round(p.progress * 100);
+                        statusLabel.innerHTML = `<span class="status-loading">● loading: ${percent}%</span>`;
+                    }
+                });
+                currentModel = modelName;
+                statusLabel.innerHTML = `<span class="status-ready">● ready</span>`;
+                modelLabel.textContent = `mode: ${modelName}`;
+                return generator;
+            } catch (err) {
+                console.error('Load model error:', err);
+                statusLabel.innerHTML = `<span class="status-error">● model failed</span>`;
+                modelLabel.textContent = `mode: ${modelName} (failed)`;
+                generator = null;
+                return null;
+            } finally {
+                loadingModel = false;
+            }
+        }
+
+        // ================================================================
+        // 🔥 GENERATE DENGAN CHAIN OF THOUGHT
+        // ================================================================
+        async function generateWithCoT(userMsg) {
+            const pipe = await loadModel(modelSelect.value);
+            if (!pipe) {
+                return {
+                    think: '⚠️ Model gagal dimuat. Coba refresh atau pilih model lain.',
+                    answer: 'Model tidak tersedia. Silakan reload halaman.'
+                };
+            }
+
+            const fullPrompt = `${VEXLO_SYSTEM}\n\nUser: ${userMsg}\n\nAssistant:`;
+
+            try {
+                const result = await pipe(fullPrompt, {
+                    max_new_tokens: 200,
+                    temperature: 0.7,
+                    do_sample: true,
+                    top_p: 0.9,
+                });
+
+                let output = result[0]?.generated_text || '';
+                output = output.replace(fullPrompt, '').trim();
+
+                // Ekstrak think dan jawaban
+                const thinkMatch = output.match(/<think>([\s\S]*?)<\/think>/);
+                let think = '';
+                let answer = output;
+
+                if (thinkMatch) {
+                    think = thinkMatch[1].trim();
+                    answer = output.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+                } else {
+                    think = '🧠 Model memberikan jawaban langsung (tanpa tag think).';
+                }
+
+                if (!answer) answer = '⚠️ Model tidak memberikan jawaban.';
+
+                return { think, answer };
+
+            } catch (err) {
+                console.error('Generate error:', err);
+                return {
+                    think: '❌ Error saat generate.',
+                    answer: 'Terjadi kesalahan: ' + err.message
+                };
+            }
+        }
+
+        // ================================================================
+        // 🔥 REASONING FALLBACK (jika model gagal)
+        // ================================================================
+        function reasoningFallback(msg) {
+            const lower = msg.toLowerCase();
+            if (/(halo|hai|hei|hey|selamat|pagi|siang|sore|malam|apa kabar|kabar|kenal|perkenalkan|nama)/i.test(msg) &&
+                msg.length < 30) {
+                return {
+                    think: '🤔 User menyapa. Saya akan merespon dengan ramah.',
+                    answer: '👋 Halo! Saya Riruru, asisten AI dari vexlo.core. Ada yang bisa saya bantu?'
+                };
+            }
+            if (lower.includes('vexlo') || lower.includes('startup') || lower.includes('perusahaan')) {
+                return {
+                    think: '🔍 User bertanya tentang vexlo.',
+                    answer: '⚡ Vexlo adalah startup teknologi AI yang didirikan oleh founder berusia 17 tahun. Fokus utama Vexlo adalah AI Customer Service 24/7, pembuatan website, dan riset quantum detector (AQD-01).'
+                };
+            }
+            return {
+                think: '💭 Pertanyaan umum. Saya akan memberikan analisis sederhana.',
+                answer: '💡 Saya memahami pertanyaan Anda. Sebagai AI, saya bisa membantu dengan analisis logika, diskusi konseptual, dan pemecahan masalah sederhana. Coba tanyakan lebih spesifik.'
+            };
+        }
+
+        // ================================================================
+        // 🔥 HYBRID SEARCH (DDG + Wikipedia + .onion)
+        // ================================================================
+        async function hybridSearch(query) {
+            let results = [];
+            try {
+                const ddg = await fetch(
+                    `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`);
+                const d = await ddg.json();
+                if (d.AbstractText) results.push(`📘 DDG: ${d.AbstractText}`);
+                if (d.RelatedTopics && d.RelatedTopics.length) {
+                    const extra = d.RelatedTopics.slice(0, 2).map(t => t.Text).filter(Boolean);
+                    results.push(...extra);
+                }
+            } catch (e) { results.push('⚠️ DDG gagal.'); }
+
+            try {
+                const wiki = await searchWikipedia(query);
+                if (wiki) results.push(`📖 Wikipedia: ${wiki.slice(0, 600)}...`);
+            } catch (e) { results.push('⚠️ Wikipedia gagal.'); }
+
+            const lowerQ = query.toLowerCase();
+            if (lowerQ.includes('dark') || lowerQ.includes('onion') || lowerQ.includes('deep') || lowerQ.includes('tor')) {
+                try {
+                    const onionData = await scrapeURL('https://onion.wiki/');
+                    if (onionData) results.push(`🧅 .onion: ${onionData.slice(0, 600)}...`);
+                } catch (e) { results.push('⚠️ .onion gagal.'); }
+            }
+
+            if (results.length === 0 || results.every(r => r.includes('gagal') || r.includes('⚠️'))) {
+                if (knowledgeBase.length > 0) {
+                    const random = knowledgeBase.slice(0, 200).join(' ');
+                    results.push(`📚 Knowledge base (sample): ${random.slice(0, 800)}...`);
+                } else {
+                    results.push('❌ Tidak ada data.');
+                }
+            }
+            if (!results.length) return 'Tidak ditemukan hasil.';
+            return results.join('\n\n');
+        }
+
+        async function searchWikipedia(q) {
+            try {
+                let s = await fetch(
+                    `https://id.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&format=json&origin=*`
+                    );
+                let d = await s.json();
+                if (!d.query || !d.query.search || !d.query.search.length) {
+                    s = await fetch(
+                        `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&format=json&origin=*`
+                        );
+                    d = await s.json();
+                    if (!d.query || !d.query.search || !d.query.search.length) return null;
+                }
+                const title = d.query.search[0].title;
+                const lang = d.query.search[0].ns === 0 ? 'id' : 'en';
+                const c = await fetch(
+                    `https://${lang}.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&titles=${encodeURIComponent(title)}&format=json&origin=*`
+                    );
+                const d2 = await c.json();
+                const pages = d2.query && d2.query.pages;
+                if (pages) {
+                    const page = Object.values(pages)[0];
+                    if (page && page.extract) return page.extract;
+                }
+                return null;
+            } catch (e) { return null; }
+        }
+
+        async function scrapeURL(url) {
+            let target = url;
+            if (url.includes('.onion')) target = 'https://onion.to/' + url;
+            const proxies = [
+                (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+                (u) => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+                (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`
+            ];
+            for (const p of proxies) {
+                try {
+                    const resp = await fetch(p(target), { signal: AbortSignal.timeout(15000) });
+                    if (!resp.ok) continue;
+                    const html = await resp.text();
+                    const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 5000);
+                    if (text.length > 100) return text;
+                } catch (e) { continue; }
+            }
+            throw new Error('Semua proxy gagal.');
+        }
+
+        function addToKnowledge(text) {
+            if (!text || text.length < 5) return 0;
+            const words = text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 1);
+            if (!words.length) return 0;
+            for (const w of words) {
+                if (!knowledgeMap.has(w)) knowledgeMap.set(w, 1);
+                else knowledgeMap.set(w, knowledgeMap.get(w) + 1);
+            }
+            knowledgeBase.push(...words);
+            saveKnowledge();
+            return words.length;
+        }
+
+        // ---- DB (IndexedDB) ----
+        async function sha256(msg) {
+            const buf = new TextEncoder().encode(msg);
+            const hash = await crypto.subtle.digest('SHA-256', buf);
+            return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open('VexloChain', 1);
+                req.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('blocks')) {
+                        db.createObjectStore('blocks', { keyPath: 'id', autoIncrement: true });
+                    }
+                    if (!db.objectStoreNames.contains('knowledge')) {
+                        db.createObjectStore('knowledge', { keyPath: 'id' });
+                    }
+                };
+                req.onsuccess = () => { db = req.result;
+                    resolve(db); };
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function addBlock(data) {
+            if (!db) return;
+            const tx = db.transaction('blocks', 'readwrite');
+            const store = tx.objectStore('blocks');
+            const req = store.add({
+                timestamp: Date.now(),
+                data,
+                hash: await sha256(JSON.stringify(data))
+            });
+            return new Promise((resolve) => {
+                req.onsuccess = () => resolve(req.result);
+            });
+        }
+
+        function getAllBlocks() {
+            if (!db) return Promise.resolve([]);
+            return new Promise((resolve) => {
+                const tx = db.transaction('blocks', 'readonly');
+                const store = tx.objectStore('blocks');
+                store.getAll().onsuccess = (e) => resolve(e.target.result);
+            });
+        }
+
+        async function saveKnowledge() {
+            if (!db) return;
+            const tx = db.transaction('knowledge', 'readwrite');
+            tx.objectStore('knowledge').put({ id: 'main', words: knowledgeBase, updated: Date.now() });
+        }
+
+        async function loadKnowledge() {
+            if (!db) return;
+            const tx = db.transaction('knowledge', 'readonly');
+            const req = tx.objectStore('knowledge').get('main');
+            return new Promise(r => {
+                req.onsuccess = () => {
+                    if (req.result) { knowledgeBase = req.result.words || []; }
+                    r();
+                };
+            });
+        }
+
+        // ---- render ----
+        function renderBlocks(blocks) {
+            if (!blocks || blocks.length === 0) {
+                chatLog.innerHTML =
+                '<div style="color:#2a3a4a;text-align:center;padding:16px;">belum ada percakapan.</div>';
+                return;
+            }
+            let html = '';
+            const sorted = blocks.slice().sort((a, b) => b.timestamp - a.timestamp);
+            for (const b of sorted) {
+                const d = b.data;
+                const t = new Date(b.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit',
+                    second: '2-digit' });
+                let thinkHtml = '';
+                if (d.think) thinkHtml = `<div class="think">💡 ${d.think}</div>`;
+                html +=
+                    `<div class="entry">${thinkHtml}<div class="user">[u] ${d.user||''}</div><div class="assistant">[r] ${d.assistant||''}</div><div class="meta"><span>${t}</span><span style="color:#2a3a4a;">${b.hash.slice(0,8)}...</span></div></div>`;
+            }
+            chatLog.innerHTML = html;
+            blockCountEl.textContent = blocks.length;
+        }
+
+        function updateSelfAwareness(blocks) {
+            if (!blocks || blocks.length < 2) {
+                awarenessLevelEl.textContent = '0%';
+                awarenessPercentEl.textContent = '0%';
+                return;
+            }
+            const total = blocks.length;
+            let level = Math.min(100, Math.round(20 + total * 0.12 + knowledgeBase.length / 5000));
+            awarenessLevelEl.textContent = level + '%';
+            awarenessPercentEl.textContent = level + '%';
+        }
+
+        async function refreshUI() {
+            try {
+                const blocks = await getAllBlocks();
+                renderBlocks(blocks);
+                updateSelfAwareness(blocks);
+            } catch (e) {}
+        }
+
+        // ---- emotion ----
+        function detectEmotion(text) {
+            const lower = text.toLowerCase();
+            const positive = ['senang', 'bahagia', 'good', 'great', 'love', 'suka', 'puas', 'keren', 'terima kasih',
+                'makasih'
+            ];
+            const negative = ['sedih', 'kecewa', 'marah', 'kesal', 'benci', 'buruk', 'gagal', 'error', 'sial', 'capek',
+                'lelah'
+            ];
+            const anger = ['marah', 'kesal', 'geram', 'kesel', 'jengkel', 'bangsat', 'anjing', 'bajingan', 'memek', 'ngentod',
+                'asu', 'goblok', 'tolol', 'bodoh', 'bego', 'idiot'
+            ];
+            let score = 0;
+            for (const w of positive)
+                if (lower.includes(w)) score += 1;
+            for (const w of negative)
+                if (lower.includes(w)) score -= 1;
+            for (const w of anger)
+                if (lower.includes(w)) { score -= 3; break; }
+            let emotion = 'netral';
+            if (score > 2) emotion = 'positif';
+            else if (score < -1) emotion = 'negatif';
+            if (lower.includes('marah') || lower.includes('kesal') || lower.includes('jengkel')) emotion = 'marah';
+            if (lower.includes('senang') || lower.includes('bahagia')) emotion = 'senang';
+            if (lower.includes('sedih') || lower.includes('kecewa')) emotion = 'sedih';
+            return { emotion, score };
+        }
+
+        // ================================================================
+        // 🔥 MAIN HANDLER
+        // ================================================================
+        async function handleSend() {
+            const msg = userInput.value.trim();
+            if (!msg) { statusLabel.textContent = '● kosong'; return; }
+            if (isProcessing) return;
+
+            isProcessing = true;
+            sendBtn.disabled = true;
+            sendBtn.textContent = '⏳ ...';
+            statusLabel.textContent = '● processing';
+
+            try {
+                const emotion = detectEmotion(msg);
+                emotionBadge.textContent = `💭 ${emotion.emotion}`;
+
+                // Coba generate dengan model
+                let result = await generateWithCoT(msg);
+
+                // Jika model gagal, fallback ke reasoning
+                if (!result.answer || result.answer.includes('Model tidak tersedia')) {
+                    const fallback = reasoningFallback(msg);
+                    result.think = fallback.think + ' (fallback)';
+                    result.answer = fallback.answer;
+                }
+
+                // Simpan ke blockchain
+                await addBlock({ user: msg, assistant: result.answer, think: result.think });
+
+                await refreshUI();
+                statusLabel.textContent = '● selesai';
+                userInput.value = '';
+                superpositionCount++;
+                superposLabel.textContent = `⚛ superposisi: ${superpositionCount}`;
+
+            } catch (err) {
+                statusLabel.textContent = '● error';
+                await addBlock({ user: msg, assistant: 'Error: ' + err.message });
+                await refreshUI();
+            } finally {
+                isProcessing = false;
+                sendBtn.disabled = false;
+                sendBtn.textContent = '→ kirim · simpan ke blockchain';
+            }
+        }
+
+        // ---- event listeners ----
+        sendBtn.addEventListener('click', handleSend);
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault();
+                handleSend(); }
+        });
+
+        scrapeBtn.addEventListener('click', async () => {
+            const input = scrapeInput.value.trim();
+            if (!input) { alert('Masukkan URL atau keyword.'); return; }
+            statusLabel.textContent = '● scraping...';
+            try {
+                let text;
+                if (input.startsWith('http')) { text = await scrapeURL(input); } else { text = await searchWikipedia(
+                    input); }
+                if (text && text.length > 100) {
+                    const count = addToKnowledge(text);
+                    alert(`Berhasil scrape ${count} kata. Total: ${knowledgeBase.length}`);
+                    await addBlock({ user: 'system', assistant: `scrape: ${input}, ${count} kata` });
+                    await refreshUI();
+                } else { alert('Tidak ditemukan konten.'); }
+            } catch (e) { alert('Scrape gagal: ' + e.message); }
+            statusLabel.textContent = '● siap';
+        });
+
+        onionBtn.addEventListener('click', () => {
+            const url = scrapeInput.value.trim();
+            if (!url || !url.includes('.onion')) { alert('Masukkan URL .onion'); return; }
+            scrapeBtn.click();
+        });
+
+        // ---- init ----
+        async function init() {
+            try {
+                await openDB();
+                await loadKnowledge();
+                await refreshUI();
+
+                // Preload model default
+                const defaultModel = modelSelect.value;
+                statusLabel.innerHTML = `<span class="status-loading">● loading ${defaultModel}...</span>`;
+                modelLabel.textContent = `mode: ${defaultModel} (loading)`;
+
+                setTimeout(async () => {
+                    try {
+                        await loadModel(defaultModel);
+                    } catch (e) {
+                        console.warn('Preload failed:', e);
+                    }
+                }, 500);
+
+                modelSelect.addEventListener('change', async () => {
+                    const val = modelSelect.value;
+                    modeLabel.textContent = `mode: ${val}`;
+                    modelLabel.textContent = `mode: ${val} (loading...)`;
+                    statusLabel.innerHTML = `<span class="status-loading">● loading ${val}...</span>`;
+                    try {
+                        await loadModel(val);
+                    } catch (e) {
+                        statusLabel.innerHTML = `<span class="status-error">● load failed</span>`;
+                    }
+                });
+
+            } catch (e) {
+                console.error('Init error:', e);
+                statusLabel.textContent = '● error db';
+            }
+        }
+
+        init();
+    </script>
+</body>
+  </html>
