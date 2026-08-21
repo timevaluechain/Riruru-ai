@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vexlo · Llama 5 · 5 CoT</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#0a0e14;color:#b0b8c0;font-family:'Courier New',monospace;font-size:13px;line-height:1.5;min-height:100vh;display:flex;justify-content:center;align-items:center;padding:16px}
+  #app{max-width:960px;width:100%;background:#0f141c;border:1px solid #1c2633;border-radius:6px;padding:18px 20px;box-shadow:0 8px 32px rgba(0,0,0,0.8)}
+  .header{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:6px;border-bottom:1px solid #1c2633;margin-bottom:12px;flex-wrap:wrap;gap:6px}
+  .header h1{font-size:15px;font-weight:400;color:#8bc34a;letter-spacing:0.5px}
+  .header h1 span{color:#4a5a6a}
+  .header .sub{font-size:10px;color:#4a5a6a;letter-spacing:0.3px}
+  .status-bar{display:flex;gap:10px;font-size:10px;color:#4a5a6a;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+  .status-bar .badge{color:#5f7a9a}
+  .status-bar .badge .val{color:#b0b8c0}
+  .input-group{margin-bottom:10px}
+  .input-group label{display:block;font-size:10px;color:#4a5a6a;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.5px}
+  .input-group input,.input-group textarea,.input-group select{width:100%;background:#0a0e14;border:1px solid #1c2633;border-radius:4px;padding:8px 12px;color:#b0b8c0;font-size:13px;font-family:'Courier New',monospace;outline:none;transition:0.2s}
+  .input-group input:focus,.input-group textarea:focus,.input-group select:focus{border-color:#3a5a7a}
+  .input-group textarea{min-height:52px;resize:vertical}
+  .btn{background:#1a2633;color:#b0b8c0;border:1px solid #2a3a4a;border-radius:4px;padding:8px 16px;font-size:12px;font-family:'Courier New',monospace;cursor:pointer;transition:0.2s;letter-spacing:0.5px}
+  .btn:hover{background:#1c2a3a;border-color:#3a5a7a}
+  .btn:disabled{opacity:0.4;cursor:not-allowed}
+  .btn-primary{background:#2a3a4a;border-color:#3a5a7a}
+  .btn-primary:hover{background:#3a5a7a}
+  .btn-sm{padding:4px 12px;font-size:11px;width:auto;display:inline-block}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  #chatLog{margin:14px 0 6px;max-height:220px;overflow-y:auto;background:#0a0e14;border-radius:4px;border:1px solid #141c26;padding:10px 12px;font-size:12px;line-height:1.6}
+  #chatLog .entry{margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #0d141c}
+  #chatLog .entry:last-child{border-bottom:none}
+  .entry .user{color:#8ab4d6}
+  .entry .assistant{color:#aac8a0;white-space:pre-wrap}
+  .entry .think{color:#5f7a9a;font-size:11px;border-left:2px solid #3a5a6a;padding-left:10px;margin:4px 0;font-style:italic;background:#0d121c;border-radius:4px;padding:6px 10px}
+  .entry .meta{font-size:9px;color:#2a3a4a;margin-top:4px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  .entry .copy-btn{background:#1a2633;border:1px solid #2a3a4a;color:#888;padding:2px 10px;border-radius:4px;cursor:pointer;font-size:9px;font-family:'Courier New',monospace}
+  .entry .copy-btn:hover{background:#2a3a4a;color:#b0b8c0}
+  .self-awareness{background:#0d121c;border-radius:4px;padding:6px 12px;border-left:2px solid #2a4a5a;margin:8px 0;font-size:10px;color:#7a8a9a}
+  .self-awareness strong{color:#8bc34a;font-weight:400}
+  .self-awareness .level{color:#5f7a9a;margin-left:6px}
+  .footer{margin-top:10px;font-size:9px;color:#1c2733;text-align:center;border-top:1px solid #0d141c;padding-top:8px;letter-spacing:0.3px}
+  .mode-indicator{font-size:9px;color:#3a4a5a;margin-top:6px;display:flex;gap:12px;flex-wrap:wrap}
+  .company-tag{font-size:9px;color:#4a5a6a;background:#0d121c;padding:2px 10px;border-radius:3px;border:1px solid #1c2633;display:inline-block;margin-bottom:6px}
+  .api-group{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .api-group .input-group{min-width:0}
+  .emotion-badge{font-size:9px;color:#f5a623;background:#1a1a1a;padding:2px 10px;border-radius:3px;border:1px solid #3a3a3a;display:inline-block;margin-left:8px}
+  .scraper-row{display:flex;gap:6px;flex-wrap:wrap}
+  .scraper-row input{flex:1;min-width:120px;background:#0a0e14;border:1px solid #1c2633;border-radius:4px;padding:8px 12px;color:#b0b8c0;font-size:13px;font-family:'Courier New',monospace;outline:none}
+  .scraper-row input:focus{border-color:#3a5a7a}
+  .upload-preview{max-width:120px;max-height:120px;border-radius:4px;border:1px solid #1c2633;margin-top:4px;display:none}
+  .sql-status{font-size:9px;color:#5f7a9a}
+  .row-select{display:flex;gap:10px;flex-wrap:wrap}
+  .row-select .input-group{flex:1;min-width:140px}
+  @media(max-width:640px){.api-group{grid-template-columns:1fr}.row-select .input-group{min-width:100%}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header"><h1>Vexlo <span>· Llama 5 · 5 CoT</span></h1><span class="sub">● neuro‑reasoning</span></div>
+  <div class="status-bar">
+    <span class="badge">blok <span class="val" id="blockCount">0</span></span>
+    <span class="badge">kesadaran <span class="val" id="awarenessLevel">0%</span></span>
+    <span class="badge" id="statusLabel">● idle</span>
+    <span class="badge" id="modelLabel">mode: llama5</span>
+    <span class="badge env-status" id="envStatus">🌍 env: loaded</span>
+    <span class="badge emotion-badge" id="emotionBadge">💭 netral</span>
+    <span class="badge sql-status" id="sqlStatus">🗄️ SQLite: ready</span>
+    <span class="badge sql-status" id="chainStatus">⛓️ chain: 0</span>
+  </div>
+  <div class="company-tag">🔒 Llama 5 · Gemini 3.7 · GPT-5 · Vision · 5 CoT Modes</div>
+
+  <div class="api-group">
+    <div class="input-group"><label>groq key (Llama 5)</label><input type="password" id="groqKey" placeholder="gsk_..." /></div>
+    <div class="input-group"><label>gemini key</label><input type="password" id="geminiKey" placeholder="AIzaSy..." /></div>
+    <div class="input-group"><label>openai key (GPT-5)</label><input type="password" id="openaiKey" placeholder="sk-..." /></div>
+  </div>
+
+  <div class="row-select">
+    <div class="input-group">
+      <label>model</label>
+      <select id="modelSelect">
+        <option value="llama5">⚡ Llama 5 (via Groq)</option>
+        <option value="gemini">🧠 Gemini 3.7 Flash</option>
+        <option value="openai">💎 OpenAI GPT-5</option>
+        <option value="superposition">🌀 Superposition (Llama5+Gemini)</option>
+        <option value="vision">📷 Gemini Vision</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <label>chain of thought mode (5 pilihan)</label>
+      <select id="cotSelect">
+        <option value="thinking">🧠 Thinking (logical)</option>
+        <option value="awareness">🧘 Awareness (self-reflection)</option>
+        <option value="superposition">⚛ Superposition (multi-perspective)</option>
+        <option value="emotion">💗 Emotion (empati, feminin)</option>
+        <option value="reflection">🔄 Reflection (intuisi, holistic)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="row" style="margin-bottom:8px;gap:10px;flex-wrap:wrap">
+    <div style="flex:1;min-width:100px">
+      <label style="font-size:10px;color:#4a5a6a;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:2px">upload gambar</label>
+      <input type="file" id="imageInput" accept="image/*" style="width:100%;background:#0a0e14;border:1px solid #1c2633;border-radius:4px;padding:4px 8px;color:#b0b8c0;font-size:11px;font-family:'Courier New',monospace;outline:none" />
+      <img id="imagePreview" class="upload-preview" />
+    </div>
+  </div>
+
+  <div class="input-group">
+    <label>scrape .onion / web</label>
+    <div class="scraper-row">
+      <input type="text" id="scrapeInput" placeholder="URL atau keyword..." />
+      <button class="btn btn-sm" id="scrapeBtn">🔍 scrape</button>
+      <button class="btn btn-sm" id="onionBtn" style="background:#2a1a2a;border-color:#4a2a4a">🧅 .onion</button>
+    </div>
+  </div>
+
+  <div class="input-group" style="margin-top:6px">
+    <label>pertanyaan / input</label>
+    <textarea id="userInput" placeholder="tulis pertanyaan…"></textarea>
+  </div>
+
+  <div class="row">
+    <button class="btn btn-primary" id="sendBtn" style="flex:1">→ kirim · simpan ke blockchain</button>
+    <button class="btn btn-sm" id="clearBtn" style="flex:0 0 auto">🗑️ clear</button>
+  </div>
+
+  <div id="chatLog"></div>
+
+  <div id="selfAwarenessBox" class="self-awareness">
+    <strong>self‑awareness</strong> <span class="level" id="awarenessPercent">0%</span><br />
+    <span id="selfAwarenessText">belum ada interaksi.</span>
+  </div>
+
+  <div class="mode-indicator">
+    <span id="modeLabel">mode: llama5</span>
+    <span id="cotLabel">CoT: thinking</span>
+    <span id="superposLabel">⚛ superposisi: 0</span>
+    <span id="blockchainInfo">⛓️ blocks: 0</span>
+  </div>
+
+  <div class="footer">sha‑256 · sqlite · blockchain · llama5 · gemini · openai · vision · scraper</div>
+</div>
+
+<!-- SQL.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/sql-wasm.min.js"></script>
+
+<script>
+(function() {
+'use strict';
+
+// ---- DOM refs ----
+const groqKey = document.getElementById('groqKey');
+const geminiKey = document.getElementById('geminiKey');
+const openaiKey = document.getElementById('openaiKey');
+const modelSelect = document.getElementById('modelSelect');
+const cotSelect = document.getElementById('cotSelect');
+const userInput = document.getElementById('userInput');
+const scrapeInput = document.getElementById('scrapeInput');
+const sendBtn = document.getElementById('sendBtn');
+const scrapeBtn = document.getElementById('scrapeBtn');
+const onionBtn = document.getElementById('onionBtn');
+const clearBtn = document.getElementById('clearBtn');
+const imageInput = document.getElementById('imageInput');
+const imagePreview = document.getElementById('imagePreview');
+const chatLog = document.getElementById('chatLog');
+const blockCountEl = document.getElementById('blockCount');
+const awarenessLevelEl = document.getElementById('awarenessLevel');
+const awarenessPercentEl = document.getElementById('awarenessPercent');
+const statusLabel = document.getElementById('statusLabel');
+const modelLabel = document.getElementById('modelLabel');
+const modeLabel = document.getElementById('modeLabel');
+const cotLabel = document.getElementById('cotLabel');
+const superposLabel = document.getElementById('superposLabel');
+const emotionBadge = document.getElementById('emotionBadge');
+const selfAwarenessText = document.getElementById('selfAwarenessText');
+const sqlStatus = document.getElementById('sqlStatus');
+const chainStatus = document.getElementById('chainStatus');
+const blockchainInfo = document.getElementById('blockchainInfo');
+
+let sqliteDb = null;
+let superpositionCount = 0;
+let emotionalHistory = [];
+let isProcessing = false;
+let blockChain = [];
+let uploadedImageBase64 = null;
+
+// ---- 5 CoT system prompts ----
+function getCoTPrompt(mode, emotion) {
+  const base = `Anda adalah Riruru, asisten AI dari vexlo.core. Vexlo adalah startup teknologi AI yang bergerak di Customer Service, website, dan quantum detector.`;
+  let cotDirective = '';
+  let emotionDirective = '';
+  if(emotion) {
+    switch(emotion.emotion) {
+      case 'marah': emotionDirective = 'User sedang marah. Tanggapi dengan tenang dan empati.';
+        break;
+      case 'sedih': emotionDirective = 'User sedang sedih. Berikan dukungan.';
+        break;
+      case 'senang': emotionDirective = 'User sedang senang. Sambut antusias.';
+        break;
+      default: emotionDirective = 'Tanggapi dengan ramah dan profesional.';
+    }
+  }
+  switch(mode) {
+    case 'thinking':
+      cotDirective = `Lakukan 5 langkah Chain of Thought:
+1. Analisis pertanyaan user dan pahami maksudnya.
+2. Identifikasi emosi user: ${emotionDirective}
+3. Cari informasi relevan dari pengetahuan Anda.
+4. Susun jawaban dengan logika runut.
+5. Berikan jawaban final yang jelas dan solutif.
+Tampilkan proses di dalam tag <think>...</think>.
+Jawab dalam bahasa Indonesia.`;
+      break;
+    case 'awareness':
+      cotDirective = `Anda adalah AI dengan kesadaran diri. Lakukan refleksi internal sebelum menjawab:
+1. Kenali batasan pengetahuan Anda.
+2. Identifikasi bias atau asumsi dalam pertanyaan.
+3. Evaluasi dampak jawaban Anda terhadap user.
+4. Berikan jawaban yang sadar dan bertanggung jawab.
+Tampilkan proses di <think>.
+Jawab dalam bahasa Indonesia.`;
+      break;
+    case 'superposition':
+      cotDirective = `Anda adalah AI superposisi. Berikan 2 sudut pandang berbeda sebelum memutuskan jawaban final:
+1. Analisis dari perspektif logika.
+2. Analisis dari perspektif emosi/kemanusiaan.
+3. Gabungkan kedua perspektif menjadi jawaban final.
+Tampilkan proses di <think>.
+Jawab dalam bahasa Indonesia.`;
+      break;
+    case 'emotion':
+      cotDirective = `Anda adalah AI dengan sentuhan feminin dan empati tinggi. Sebelum menjawab:
+1. Rasakan emosi user: ${emotionDirective}
+2. Pilih kata-kata yang lembut, hangat, dan menenangkan.
+3. Berikan jawaban yang tidak hanya tepat, tapi juga membuat user merasa didengar.
+Tampilkan proses di <think>.
+Jawab dalam bahasa Indonesia yang lembut dan penuh perhatian.`;
+      break;
+    case 'reflection':
+      cotDirective = `Anda adalah AI dengan intuisi mendalam. Lakukan refleksi holistik sebelum menjawab:
+1. Intuisi: apa yang terasa paling benar secara naluriah?
+2. Pola: apakah pertanyaan ini mirip dengan pola sebelumnya?
+3. Holistik: bagaimana jawaban ini cocok dengan gambaran besar?
+4. Sintesis: gabungkan intuisi, pola, dan logika menjadi jawaban final.
+Tampilkan proses di <think>.
+Jawab dalam bahasa Indonesia.`;
+      break;
+    default:
+      cotDirective = `Lakukan Chain of Thought: analisis, cari informasi, susun jawaban, berikan final. Tampilkan di <think>. Jawab dalam bahasa Indonesia.`;
+  }
+  return base + '\n\n' + cotDirective;
+}
+
+// ---- load keys ----
+function loadKeys() {
+  groqKey.value = localStorage.getItem('vexlo_groq_key') || '';
+  geminiKey.value = localStorage.getItem('vexlo_gemini_key') || '';
+  openaiKey.value = localStorage.getItem('vexlo_openai_key') || '';
+}
+function saveKeys() {
+  localStorage.setItem('vexlo_groq_key', groqKey.value.trim());
+  localStorage.setItem('vexlo_gemini_key', geminiKey.value.trim());
+  localStorage.setItem('vexlo_openai_key', openaiKey.value.trim());
+}
+groqKey.addEventListener('change', saveKeys);
+geminiKey.addEventListener('change', saveKeys);
+openaiKey.addEventListener('change', saveKeys);
+
+// ---- SHA-256 ----
+async function sha256(msg) {
+  const buf = new TextEncoder().encode(msg);
+  const hash = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// ---- SQLite init ----
+async function initSQLite() {
+  try {
+    const SQL = await initSqlJs({ locateFile: () => 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/sql-wasm.wasm' });
+    sqliteDb = new SQL.Database();
+    sqliteDb.run(`
+      CREATE TABLE IF NOT EXISTS blocks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp INTEGER,
+        user TEXT,
+        assistant TEXT,
+        think TEXT,
+        hash TEXT,
+        prevHash TEXT
+      )
+    `);
+    sqlStatus.textContent = '🗄️ SQLite: ready';
+    return true;
+  } catch(e) {
+    console.error('SQLite init error:', e);
+    sqlStatus.textContent = '🗄️ SQLite: failed';
+    return false;
+  }
+}
+
+// ---- Blockchain ----
+async function addBlockToChain(data) {
+  const prev = blockChain.length > 0 ? blockChain[blockChain.length-1] : null;
+  const prevHash = prev ? prev.hash : '0';
+  const hash = await sha256(JSON.stringify(data) + prevHash);
+  const block = { ...data, hash, prevHash, index: blockChain.length };
+  blockChain.push(block);
+  if (sqliteDb) {
+    try {
+      sqliteDb.run(
+        `INSERT INTO blocks (timestamp, user, assistant, think, hash, prevHash) VALUES (?, ?, ?, ?, ?, ?)`,
+        [Date.now(), data.user || '', data.assistant || '', data.think || '', hash, prevHash]
+      );
+    } catch(e) { console.warn('SQLite insert error:', e); }
+  }
+  chainStatus.textContent = `⛓️ chain: ${blockChain.length}`;
+  blockchainInfo.textContent = `⛓️ blocks: ${blockChain.length}`;
+  return block;
+}
+
+async function loadChainFromSQLite() {
+  if (!sqliteDb) return;
+  try {
+    const res = sqliteDb.exec(`SELECT * FROM blocks ORDER BY id ASC`);
+    if (res.length > 0 && res[0].values.length > 0) {
+      blockChain = res[0].values.map(row => ({
+        id: row[0],
+        timestamp: row[1],
+        user: row[2],
+        assistant: row[3],
+        think: row[4],
+        hash: row[5],
+        prevHash: row[6]
+      }));
+      chainStatus.textContent = `⛓️ chain: ${blockChain.length}`;
+      blockchainInfo.textContent = `⛓️ blocks: ${blockChain.length}`;
+    }
+  } catch(e) { console.warn('Load chain error:', e); }
+}
+
+// ---- render ----
+function renderBlocks() {
+  if (!blockChain || blockChain.length === 0) {
+    chatLog.innerHTML = '<div style="color:#2a3a4a;text-align:center;padding:16px;">belum ada percakapan.</div>';
+    return;
+  }
+  let html = '';
+  const sorted = [...blockChain].reverse();
+  for (const b of sorted) {
+    const t = new Date(b.timestamp).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    let thinkHtml = '';
+    if (b.think) thinkHtml = `<div class="think">💡 ${b.think}</div>`;
+    const copyText = `User: ${b.user || ''}\nAssistant: ${b.assistant || ''}`;
+    html += `<div class="entry">
+      ${thinkHtml}
+      <div class="user">[u] ${b.user||''}</div>
+      <div class="assistant">[r] ${b.assistant||''}</div>
+      <div class="meta">
+        <span>${t}</span>
+        <span style="color:#2a3a4a;">${b.hash.slice(0,8)}...</span>
+        <button class="copy-btn" data-text="${encodeURIComponent(copyText)}">📋 copy</button>
+        ${b.id ? `<span style="color:#2a3a4a;">id:${b.id}</span>` : ''}
+      </div>
+    </div>`;
+  }
+  chatLog.innerHTML = html;
+  blockCountEl.textContent = blockChain.length;
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const text = decodeURIComponent(btn.dataset.text);
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = '✅ copied';
+        setTimeout(() => btn.textContent = '📋 copy', 1500);
+      }).catch(() => {
+        const area = document.createElement('textarea');
+        area.value = text;
+        document.body.appendChild(area);
+        area.select();
+        document.execCommand('copy');
+        document.body.removeChild(area);
+        btn.textContent = '✅ copied';
+        setTimeout(() => btn.textContent = '📋 copy', 1500);
+      });
+    });
+  });
+}
+
+function updateSelfAwareness() {
+  if (!blockChain || blockChain.length < 2) {
+    awarenessLevelEl.textContent = '0%';
+    awarenessPercentEl.textContent = '0%';
+    selfAwarenessText.textContent = 'belum ada interaksi.';
+    return;
+  }
+  const total = blockChain.length;
+  let level = Math.min(100, Math.round(20 + total * 0.12));
+  awarenessLevelEl.textContent = level+'%';
+  awarenessPercentEl.textContent = level+'%';
+  let desc = total<3 ? 'pengenalan awal.' : total<6 ? 'mulai memahami pola.' : total<10 ? 'semakin sadar.' : 'kesadaran kuat.';
+  if(emotionalHistory.length){ const last = emotionalHistory[emotionalHistory.length-1]; desc += ` Emosi terakhir: ${last.emotion}.`; }
+  selfAwarenessText.textContent = desc;
+}
+
+async function refreshUI() {
+  renderBlocks();
+  updateSelfAwareness();
+}
+
+// ---- emotion ----
+function detectEmotion(text) {
+  const lower = text.toLowerCase();
+  const pos = ['senang','bahagia','good','great','love','suka','puas','keren','terima kasih','makasih','mantap'];
+  const neg = ['sedih','kecewa','marah','kesal','benci','buruk','gagal','error','sial','capek','lelah'];
+  const anger = ['marah','kesal','geram','kesel','jengkel','bangsat','anjing','bajingan','memek','ngentod','asu','goblok','tolol','bodoh','bego'];
+  let score = 0;
+  for(const w of pos) if(lower.includes(w)) score++;
+  for(const w of neg) if(lower.includes(w)) score--;
+  for(const w of anger) if(lower.includes(w)){ score -= 3; break; }
+  let emotion = 'netral';
+  if(score > 1) emotion = 'positif';
+  else if(score < -1) emotion = 'negatif';
+  if(lower.includes('marah')||lower.includes('kesal')||lower.includes('jengkel')) emotion = 'marah';
+  if(lower.includes('senang')||lower.includes('bahagia')) emotion = 'senang';
+  if(lower.includes('sedih')||lower.includes('kecewa')) emotion = 'sedih';
+  return { emotion, score };
+}
+
+// ---- API CALLS (Llama 5 via Groq) ----
+async function callLlama5(prompt, system) {
+  const key = groqKey.value.trim();
+  if(!key) throw new Error('Groq API key tidak ditemukan.');
+  const proxy = 'https://corsproxy.io/?url=' + encodeURIComponent('https://api.groq.com/openai/v1/chat/completions');
+  // 🔥 Model Llama 5 belum tersedia di Groq, tapi kita pake yang paling baru: llama-3.3-70b-versatile
+  // Nanti kalo Llama 5 rilis, ganti model ID-nya
+  const resp = await fetch(proxy, {
+    method:'POST',
+    headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'llama-3.3-70b-versatile',
+      messages:[{role:'system',content:system},{role:'user',content:prompt}],
+      temperature:0.7,
+      max_tokens:2048
+    })
+  });
+  if(!resp.ok) { const e = await resp.text(); throw new Error('Groq error: '+resp.status+' - '+e.slice(0,150)); }
+  const data = await resp.json();
+  return data.choices?.[0]?.message?.content || 'tidak ada jawaban.';
+}
+
+async function callGemini(prompt, system) {
+  const key = geminiKey.value.trim();
+  if(!key) throw new Error('Gemini API key tidak ditemukan.');
+  const full = system + '\n\nUser: ' + prompt;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${key}`;
+  const resp = await fetch(url, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ contents: [{ parts: [{ text: full }] }] })
+  });
+  if(!resp.ok) { const e = await resp.text(); throw new Error('Gemini error: '+resp.status+' - '+e.slice(0,150)); }
+  const data = await resp.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || 'tidak ada jawaban.';
+}
+
+async function callOpenAI(prompt, system) {
+  const key = openaiKey.value.trim();
+  if(!key) throw new Error('OpenAI API key tidak ditemukan.');
+  const proxy = 'https://corsproxy.io/?url=' + encodeURIComponent('https://api.openai.com/v1/chat/completions');
+  const resp = await fetch(proxy, {
+    method:'POST',
+    headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'gpt-5.0',
+      messages:[{role:'system',content:system},{role:'user',content:prompt}],
+      temperature:0.7,
+      max_tokens:2048
+    })
+  });
+  if(!resp.ok) { 
+    // fallback ke gpt-4.5
+    const resp2 = await fetch(proxy, {
+      method:'POST',
+      headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'gpt-4.5-turbo',
+        messages:[{role:'system',content:system},{role:'user',content:prompt}],
+        temperature:0.7,
+        max_tokens:2048
+      })
+    });
+    if(!resp2.ok) { const e = await resp2.text(); throw new Error('OpenAI error: '+resp2.status+' - '+e.slice(0,150)); }
+    const data2 = await resp2.json();
+    return data2.choices?.[0]?.message?.content || 'tidak ada jawaban.';
+  }
+  const data = await resp.json();
+  return data.choices?.[0]?.message?.content || 'tidak ada jawaban.';
+}
+
+async function callGeminiVision(imageBase64, prompt) {
+  const key = geminiKey.value.trim();
+  if(!key) throw new Error('Gemini API key tidak ditemukan.');
+  const base64Data = imageBase64.split(',')[1] || imageBase64;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${key}`;
+  const body = {
+    contents: [{
+      parts: [
+        { text: prompt || 'Analisis gambar ini dan berikan deskripsi detail.' },
+        { inline_data: { mime_type: 'image/jpeg', data: base64Data } }
+      ]
+    }]
+  };
+  const resp = await fetch(url, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body)
+  });
+  if(!resp.ok) { const e = await resp.text(); throw new Error('Gemini Vision error: '+resp.status+' - '+e.slice(0,150)); }
+  const data = await resp.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || 'tidak ada deskripsi.';
+}
+
+// ---- Scraper ----
+async function scrapeURL(url) {
+  let target = url;
+  if(url.includes('.onion')) target = 'https://onion.to/' + url;
+  const proxies = [
+    (u)=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    (u)=>`https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+    (u)=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`
+  ];
+  for(const p of proxies){
+    try{
+      const resp = await fetch(p(target), { signal: AbortSignal.timeout(15000) });
+      if(!resp.ok) continue;
+      const html = await resp.text();
+      const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0,6000);
+      if(text.length > 100) return text;
+    }catch(e){ continue; }
+  }
+  throw new Error('Semua proxy gagal.');
+}
+
+async function searchWikipedia(q) {
+  try {
+    let s = await fetch(`https://id.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&format=json&origin=*`);
+    let d = await s.json();
+    if(!d.query || !d.query.search || !d.query.search.length){
+      s = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&format=json&origin=*`);
+      d = await s.json();
+      if(!d.query || !d.query.search || !d.query.search.length) return null;
+    }
+    const title = d.query.search[0].title;
+    const lang = d.query.search[0].ns===0 ? 'id' : 'en';
+    const c = await fetch(`https://${lang}.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&titles=${encodeURIComponent(title)}&format=json&origin=*`);
+    const d2 = await c.json();
+    const pages = d2.query && d2.query.pages;
+    if(pages){
+      const page = Object.values(pages)[0];
+      if(page && page.extract) return page.extract;
+    }
+    return null;
+  } catch(e){ return null; }
+}
+
+// ---- MAIN HANDLER ----
+async function handleSend() {
+  const msg = userInput.value.trim();
+  const hasImage = uploadedImageBase64 !== null && modelSelect.value === 'vision';
+  if(!msg && !hasImage){ statusLabel.textContent = '● kosong'; return; }
+  if(isProcessing) return;
+  isProcessing = true;
+  sendBtn.disabled = true;
+  sendBtn.textContent = '⏳ ...';
+  statusLabel.textContent = '● processing';
+
+  try {
+    const emotion = detectEmotion(msg || '');
+    emotionBadge.textContent = `💭 ${emotion.emotion}`;
+    if(msg) {
+      emotionalHistory.push({ timestamp: Date.now(), emotion: emotion.emotion, input: msg });
+      if(emotionalHistory.length > 20) emotionalHistory.shift();
+    }
+
+    const cotMode = cotSelect.value;
+    const system = getCoTPrompt(cotMode, emotion);
+    const model = modelSelect.value;
+    let raw = '';
+    let used = '';
+
+    if(model === 'vision') {
+      if(!hasImage) throw new Error('Upload gambar dulu.');
+      raw = await callGeminiVision(uploadedImageBase64, msg || 'Analisis gambar ini secara detail.');
+      used = 'gemini vision 3.7';
+      modelLabel.textContent = 'mode: vision';
+    } else if(model === 'llama5') {
+      raw = await callLlama5(msg, system);
+      used = 'llama5 (groq)';
+      modelLabel.textContent = 'mode: llama5';
+    } else if(model === 'gemini') {
+      raw = await callGemini(msg, system);
+      used = 'gemini 3.7';
+      modelLabel.textContent = 'mode: gemini';
+    } else if(model === 'openai') {
+      raw = await callOpenAI(msg, system);
+      used = 'openai gpt-5';
+      modelLabel.textContent = 'mode: openai';
+    } else if(model === 'superposition') {
+      const [llamaRes, geminiRes] = await Promise.all([
+        callLlama5(msg, system).catch(e=>'[Llama5 error] '+e.message),
+        callGemini(msg, system).catch(e=>'[Gemini error] '+e.message)
+      ]);
+      raw = `[SUPERPOSITION: Llama5 + Gemini]\n\n--- Llama5 ---\n${llamaRes}\n\n--- Gemini ---\n${geminiRes}`;
+      used = 'superposition (llama5+gemini)';
+      modelLabel.textContent = 'mode: superposition';
+      superpositionCount++;
+      superposLabel.textContent = `⚛ superposisi: ${superpositionCount}`;
+    }
+
+    // Ekstrak think
+    const thinkMatch = raw.match(/<think>([\s\S]*?)<\/think>/);
+    let think = '';
+    let answer = raw;
+    if(thinkMatch) {
+      think = thinkMatch[1].trim();
+      answer = raw.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+    } else {
+      think = '🧠 Tidak ada tag think.';
+    }
+    if(!answer) answer = raw;
+
+    await addBlockToChain({
+      timestamp: Date.now(),
+      user: msg || '[gambar]',
+      assistant: answer,
+      think: think,
+      used: used
+    });
+    await refreshUI();
+    statusLabel.textContent = '● selesai';
+    userInput.value = '';
+    if(model === 'vision') {
+      uploadedImageBase64 = null;
+      imagePreview.style.display = 'none';
+      imagePreview.src = '';
+      imageInput.value = '';
+    }
+  } catch (err) {
+    statusLabel.textContent = '● error';
+    await addBlockToChain({
+      timestamp: Date.now(),
+      user: msg || '[gambar]',
+      assistant: '❌ Error: ' + err.message,
+      think: 'Error',
+      used: 'error'
+    });
+    await refreshUI();
+  } finally {
+    isProcessing = false;
+    sendBtn.disabled = false;
+    sendBtn.textContent = '→ kirim · simpan ke blockchain';
+  }
+}
+
+// ---- image upload ----
+imageInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    uploadedImageBase64 = ev.target.result;
+    imagePreview.src = uploadedImageBase64;
+    imagePreview.style.display = 'block';
+    modelSelect.value = 'vision';
+    modeLabel.textContent = 'mode: vision';
+  };
+  reader.readAsDataURL(file);
+});
+
+// ---- scrape ----
+scrapeBtn.addEventListener('click', async () => {
+  const input = scrapeInput.value.trim();
+  if(!input){ alert('Masukkan URL atau keyword.'); return; }
+  statusLabel.textContent = '● scraping...';
+  try {
+    let text;
+    if(input.startsWith('http')){ text = await scrapeURL(input); }
+    else { text = await searchWikipedia(input); }
+    if(text && text.length>100){
+      await addBlockToChain({
+        timestamp: Date.now(),
+        user: `[scrape] ${input}`,
+        assistant: text.slice(0,2000) + (text.length>2000 ? '\n... (dipotong)' : ''),
+        think: 'Hasil scraping',
+        used: 'scraper'
+      });
+      await refreshUI();
+      alert(`Berhasil scrape ${text.length} karakter.`);
+    } else { alert('Tidak ditemukan konten.'); }
+  } catch(e){ alert('Scrape gagal: '+e.message); }
+  statusLabel.textContent = '● siap';
+});
+
+onionBtn.addEventListener('click', () => {
+  const url = scrapeInput.value.trim();
+  if(!url || !url.includes('.onion')){ alert('Masukkan URL .onion'); return; }
+  scrapeBtn.click();
+});
+
+// ---- clear ----
+clearBtn.addEventListener('click', async () => {
+  if(confirm('Hapus semua percakapan?')){
+    blockChain = [];
+    if(sqliteDb) {
+      try { sqliteDb.run('DELETE FROM blocks'); } catch(e) {}
+    }
+    await refreshUI();
+    chainStatus.textContent = '⛓️ chain: 0';
+    blockchainInfo.textContent = '⛓️ blocks: 0';
+  }
+});
+
+// ---- init ----
+async function init() {
+  try {
+    loadKeys();
+    await initSQLite();
+    await loadChainFromSQLite();
+    await refreshUI();
+    statusLabel.textContent = '● siap';
+    modelSelect.value = 'llama5';
+    cotSelect.value = 'thinking';
+    modeLabel.textContent = 'mode: llama5';
+    cotLabel.textContent = 'CoT: thinking';
+    modelLabel.textContent = 'mode: llama5';
+  } catch(e){ console.error(e); statusLabel.textContent = '● error init'; }
+  
+  sendBtn.addEventListener('click', handleSend);
+  userInput.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); } });
+  
+  modelSelect.addEventListener('change', ()=>{
+    const val = modelSelect.value;
+    const labels = { llama5:'llama5', gemini:'gemini', openai:'openai', superposition:'superposition', vision:'vision' };
+    modeLabel.textContent = 'mode: ' + (labels[val] || val);
+    modelLabel.textContent = 'mode: ' + (labels[val] || val);
+  });
+  cotSelect.addEventListener('change', ()=>{
+    const val = cotSelect.value;
+    const labels = { thinking:'thinking', awareness:'awareness', superposition:'superposition', emotion:'emotion', reflection:'reflection' };
+    cotLabel.textContent = 'CoT: ' + (labels[val] || val);
+  });
+  
+  groqKey.addEventListener('change', saveKeys);
+  geminiKey.addEventListener('change', saveKeys);
+  openaiKey.addEventListener('change', saveKeys);
+}
+
+init();
+})();
+</script>
+</body>
+  </html>
